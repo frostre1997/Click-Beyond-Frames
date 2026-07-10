@@ -34,8 +34,9 @@ jobs:
 
       - name: Install Geode SDK
         run: |
-          geode sdk install
-          geode sdk install-binaries --platform android
+          SDK_PATH="${{ github.workspace }}/geode-sdk"
+          geode sdk install "$SDK_PATH"
+          geode sdk install-binaries --platform android --version v5.7.1
         env:
           GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
@@ -73,6 +74,14 @@ jobs:
         run: |
           mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
+
+      - name: Install Geode SDK (for combine)
+        run: |
+          SDK_PATH="${{ github.workspace }}/geode-sdk"
+          geode sdk install "$SDK_PATH"
+          geode sdk install-binaries --platform android --version v5.7.1
+        env:
+          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Combine .geode files
         run: |
