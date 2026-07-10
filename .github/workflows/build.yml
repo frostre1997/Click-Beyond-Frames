@@ -51,7 +51,7 @@ jobs:
 
       - name: Generate mod.json from template
         run: |
-          export GEODE_VERSION="v5.7.1"
+          export GEODE_VERSION="5.7.1"
           export MOD_ID="frostre1997.click-beyond-frames"
           export MOD_NAME="Click Beyond Frames"
           export MOD_VERSION="v1.0.0"
