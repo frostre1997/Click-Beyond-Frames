@@ -43,7 +43,7 @@ jobs:
 
       - name: Build mod
         run: |
-          geode build -p ${{ matrix.platform }} --config Release --sdk "$GEODE_SDK"
+          geode build -p ${{ matrix.platform }} --config Release -- -DGeode_DIR="$GEODE_SDK/lib/cmake/Geode" -DCMAKE_PREFIX_PATH="$GEODE_SDK"
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
