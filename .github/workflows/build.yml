@@ -1,0 +1,54 @@
+name: Build Geode Mod
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]  # v8a (64-bit) and v7a (32-bit)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive  # Pulls in your API submodule
+
+      - name: Build Geode Mod
+        uses: geode-sdk/build-geode-mod@main
+        id: build
+        with:
+          target: android
+          abi: ${{ matrix.abi }}
+          # Optional: sdk: 'latest' or 'nightly'
+
+      - name: Upload artifact (${{ matrix.abi }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClickBeyondFrames-${{ matrix.abi }}
+          path: ${{ steps.build.outputs.build-output }}
+
+  combine:
+    name: Combine Builds
+    runs-on: ubuntu-latest
+    needs: build-android
+    if: always()  # Combines even if one architecture fails
+
+    steps:
+      - name: Combine .geode files
+        uses: geode-sdk/build-geode-mod/combine@main
+        id: combine
+
+      - name: Upload Combined Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClickBeyondFrames-Combined
+          path: ${{ steps.combine.outputs.build-output }}
