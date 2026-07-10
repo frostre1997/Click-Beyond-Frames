@@ -11,9 +11,6 @@
 	"version": "$MOD_VERSION",
 	"developer": "$MOD_DEVELOPER",
 	"description": "$MOD_DESCRIPTION",
-	"dependencies": {
-		"frostre1997.click-beyond-frames-api": ">=v1.0.0"
-	},
 	"settings": {
 		"cbf-enabled": {
 			"name": "Enable Click Beyond Frames",
