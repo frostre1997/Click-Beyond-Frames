@@ -18,6 +18,7 @@ jobs:
 
     env:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
+      GEODE_BINARY_DIR: ${{ github.workspace }}/geode-sdk/binaries  # explicitly set
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
 
@@ -37,15 +38,22 @@ jobs:
           mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
 
-      - name: Install Geode SDK (v5.7.1)
+      - name: Install Geode SDK (5.7.1)
         run: |
           geode sdk install "$GEODE_SDK"
-          geode sdk update v5.7.1
-          geode sdk install-binaries --platform android --version v5.7.1
+          geode sdk update 5.7.1
+          geode sdk install-binaries --platform android --version 5.7.1
+
+      - name: Debug - list installed binaries
+        run: |
+          echo "Contents of $GEODE_SDK/binaries/android:"
+          ls -la $GEODE_SDK/binaries/android/ || echo "Directory not found"
+          echo "Contents of $GEODE_SDK/binaries:"
+          ls -la $GEODE_SDK/binaries/ || echo "Directory not found"
 
       - name: Download Android NDK r28 (Clang 19+)
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+          wget -q https://dl.google.com/android/repository/android-ndk-r28-linux.zip
           unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
           echo "ANDROID_NDK_HOME=${{ github.workspace }}/android-ndk-r28" >> $GITHUB_ENV
 
@@ -62,6 +70,8 @@ jobs:
       - name: Build mod
         run: |
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
+        env:
+          GEODE_BINARY_DIR: ${{ github.workspace }}/geode-sdk/binaries  # Pass to build environment
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
@@ -94,11 +104,11 @@ jobs:
           mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
 
-      - name: Install Geode SDK (v5.7.1)
+      - name: Install Geode SDK (5.7.1)
         run: |
           geode sdk install "$GEODE_SDK"
-          geode sdk update v5.7.1
-          geode sdk install-binaries --platform android --version v5.7.1
+          geode sdk update 5.7.1
+          geode sdk install-binaries --platform android --version 5.7.1
 
       - name: Combine .geode files
         run: |
