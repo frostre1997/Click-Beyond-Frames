@@ -38,7 +38,8 @@ jobs:
 
       - name: Install Geode SDK (v5.7.1)
         run: |
-          geode sdk install "$GEODE_SDK" --version v5.7.1
+          geode sdk install "$GEODE_SDK"
+          geode sdk update v5.7.1
           geode sdk install-binaries --platform android --version v5.7.1
 
       - name: Generate mod.json from template
@@ -88,7 +89,8 @@ jobs:
 
       - name: Install Geode SDK (v5.7.1)
         run: |
-          geode sdk install "$GEODE_SDK" --version v5.7.1
+          geode sdk install "$GEODE_SDK"
+          geode sdk update v5.7.1
           geode sdk install-binaries --platform android --version v5.7.1
 
       - name: Combine .geode files
