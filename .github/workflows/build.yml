@@ -41,26 +41,27 @@ jobs:
         run: |
           geode sdk install "$GEODE_SDK"
           geode sdk update 5.7.1
-          geode sdk install-binaries --platform android --version 5.7.1
-
-      - name: Debug - list SDK contents
-        run: |
-          echo "Contents of $GEODE_SDK:"
-          ls -laR $GEODE_SDK || echo "SDK directory not found"
+          # Install binaries for both ABIs
+          geode sdk install-binaries --platform android64 --version 5.7.1
+          geode sdk install-binaries --platform android32 --version 5.7.1
 
       - name: Locate loader binary
         id: locate
         run: |
-          # Search for any .so file (loader should be libgeode_loader.so)
-          LOADER=$(find $GEODE_SDK -name "libgeode_loader.so" | head -n1)
-          if [ -n "$LOADER" ]; then
+          # The loader is in $GEODE_SDK/bin/5.7.1/Geode.android${ABI}.so
+          if [ "${{ matrix.platform }}" = "android64" ]; then
+            ABI="64"
+          else
+            ABI="32"
+          fi
+          LOADER="$GEODE_SDK/bin/5.7.1/Geode.android${ABI}.so"
+          if [ -f "$LOADER" ]; then
             BIN_DIR=$(dirname "$LOADER")
             echo "Found loader at $LOADER"
             echo "GEODE_BINARY_DIR=$BIN_DIR" >> $GITHUB_ENV
             echo "BIN_DIR=$BIN_DIR" >> $GITHUB_OUTPUT
           else
-            echo "Loader not found! Trying to find any .so file..."
-            find $GEODE_SDK -name "*.so" | head -n5
+            echo "Loader not found at $LOADER"
             exit 1
           fi
 
@@ -84,7 +85,7 @@ jobs:
         run: |
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
         env:
-          GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}  # Pass the discovered path
+          GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
@@ -121,7 +122,8 @@ jobs:
         run: |
           geode sdk install "$GEODE_SDK"
           geode sdk update 5.7.1
-          geode sdk install-binaries --platform android --version 5.7.1
+          geode sdk install-binaries --platform android64 --version 5.7.1
+          geode sdk install-binaries --platform android32 --version 5.7.1
 
       - name: Combine .geode files
         run: |
