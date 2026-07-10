@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [android64, android32]   # 64-bit and 32-bit
+        platform: [android64, android32]
 
     steps:
       - name: Checkout repository
@@ -45,6 +45,7 @@ jobs:
           geode build -p ${{ matrix.platform }} --config Release
         env:
           GEODE_SDK: ${{ github.workspace }}/geode-sdk
+          CMAKE_PREFIX_PATH: ${{ github.workspace }}/geode-sdk   # <-- Added
           CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
       - name: Upload artifact (${{ matrix.platform }})
