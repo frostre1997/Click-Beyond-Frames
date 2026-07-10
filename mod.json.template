@@ -1,5 +1,5 @@
 {
-	"geode": "5.7.1",
+	"geode": "$GEODE_VERSION",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -12,7 +12,6 @@
 	"developer": "$MOD_DEVELOPER",
 	"description": "$MOD_DESCRIPTION",
 	"dependencies": {
-		"geode.node-ids": ">=v1.23.3",
 		"frostre1997.click-beyond-frames-api": ">=v1.0.0"
 	},
 	"settings": {
