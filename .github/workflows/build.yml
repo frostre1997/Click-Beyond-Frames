@@ -9,12 +9,12 @@ on:
 
 jobs:
   build-android:
-    name: Build ${{ matrix.target }}
+    name: Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target: [Android64, Android32]
+        platform: [android64, android32]   # 64-bit and 32-bit
 
     steps:
       - name: Checkout repository
@@ -42,16 +42,16 @@ jobs:
 
       - name: Build mod
         run: |
-          geode build --target ${{ matrix.target }} --config Release
+          geode build -p ${{ matrix.platform }} --config Release
         env:
           GEODE_SDK: ${{ github.workspace }}/geode-sdk
           CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
-      - name: Upload artifact (${{ matrix.target }})
+      - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
         with:
-          name: ClickBeyondFrames-${{ matrix.target }}
-          path: build/${{ matrix.target }}/*.geode
+          name: ClickBeyondFrames-${{ matrix.platform }}
+          path: build/${{ matrix.platform }}/*.geode
 
   combine:
     name: Combine Builds
@@ -86,7 +86,7 @@ jobs:
       - name: Combine .geode files
         run: |
           mkdir combined
-          geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
+          geode combine artifacts/ClickBeyondFrames-android64/*.geode artifacts/ClickBeyondFrames-android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
         env:
           GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
