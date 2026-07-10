@@ -41,9 +41,21 @@ jobs:
           geode sdk install "$GEODE_SDK"
           geode sdk install-binaries --platform android --version v5.7.1
 
+      - name: Generate mod.json from template
+        run: |
+          export GEODE_VERSION="v5.7.1"
+          export MOD_ID="frostre1997.click-beyond-frames"
+          export MOD_NAME="Click Beyond Frames"
+          export MOD_VERSION="v1.0.0"
+          export MOD_DEVELOPER="frostre1997"
+          export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
+
+          # Use envsubst to replace variables in the template
+          envsubst < mod.json.template > mod.json
+
       - name: Build mod
         run: |
-          geode build -p ${{ matrix.platform }} --config Release -- -DGeode_DIR="$GEODE_SDK/lib/cmake/Geode" -DCMAKE_PREFIX_PATH="$GEODE_SDK"
+          geode build -p ${{ matrix.platform }} --config Release
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
