@@ -20,6 +20,7 @@ jobs:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
+      GEODE_PROFILE_PATH: ${{ github.workspace }}/dummy_profile  # <-- profile path
 
     steps:
       - name: Checkout repository
@@ -35,7 +36,10 @@ jobs:
       - name: Setup dummy Geode profile
         run: |
           mkdir -p dummy_profile/mods
+          # Add profile (this will create the necessary files)
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
+          # Override the profile path to our local folder
+          echo "GEODE_PROFILE_PATH=${{ github.workspace }}/dummy_profile" >> $GITHUB_ENV
 
       - name: Install Geode SDK (5.7.1)
         run: |
@@ -46,7 +50,7 @@ jobs:
 
       - name: Install dependency (geode.node-ids)
         run: |
-          geode mod install geode.node-ids --profile dummy
+          geode mods install geode.node-ids
 
       - name: Locate loader binary
         id: locate
@@ -88,7 +92,6 @@ jobs:
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
         env:
           GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
-          GEODE_PROFILE: dummy
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
@@ -120,6 +123,7 @@ jobs:
         run: |
           mkdir -p dummy_profile/mods
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
+          echo "GEODE_PROFILE_PATH=${{ github.workspace }}/dummy_profile" >> $GITHUB_ENV
 
       - name: Install Geode SDK (5.7.1)
         run: |
