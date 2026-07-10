@@ -41,19 +41,18 @@ jobs:
         run: |
           geode sdk install "$GEODE_SDK"
           geode sdk update 5.7.1
-          # Install binaries for both ABIs (the CLI handles this automatically)
           geode sdk install-binaries --platform android --version 5.7.1
 
-      - name: Debug - list binary directories
+      - name: Debug - list SDK contents
         run: |
-          echo "Contents of $GEODE_SDK/binaries:"
-          ls -laR $GEODE_SDK/binaries/ || echo "Directory not found"
+          echo "Contents of $GEODE_SDK:"
+          ls -laR $GEODE_SDK || echo "SDK directory not found"
 
       - name: Locate loader binary
         id: locate
         run: |
-          # Search for libgeode_loader.so (Android loader)
-          LOADER=$(find $GEODE_SDK/binaries -name "libgeode_loader.so" | head -n1)
+          # Search for any .so file (loader should be libgeode_loader.so)
+          LOADER=$(find $GEODE_SDK -name "libgeode_loader.so" | head -n1)
           if [ -n "$LOADER" ]; then
             BIN_DIR=$(dirname "$LOADER")
             echo "Found loader at $LOADER"
@@ -61,7 +60,7 @@ jobs:
             echo "BIN_DIR=$BIN_DIR" >> $GITHUB_OUTPUT
           else
             echo "Loader not found! Trying to find any .so file..."
-            find $GEODE_SDK/binaries -name "*.so" | head -n5
+            find $GEODE_SDK -name "*.so" | head -n5
             exit 1
           fi
 
