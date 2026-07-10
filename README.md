@@ -86,13 +86,61 @@ adb install -r build/android/arm64-v7a/ClickBeyondFrames.geode
 
 This Mod provides a public API for other mods to interact:
 
-## Checi if Click Beyond Frames is installed
+## Check if Click Beyond Frames is installed
 
-```hpp
+```API.hpp
 #include <ClickBeyondFrames/API.hpp>
 if (cbfbeyond::dev::isInstalled()) {
     // Mod is present
 }
 ```
 
+---
 
+## Get runtime state (anti-cheat)
+
+```Checker.hpp
+#include <ClickBeyondFrames/Checker.hpp>
+auto state = clickbeyondframes::checker::getState();
+if (state.isExceedingVanilla) {
+    // User is above 480 TPS
+}
+```
+
+---
+
+# Anti-Cheat Intagration
+
+The checker API exposes:
+
+- Current polling rate
+- Whether it exceeds 480 TPS
+- Thread health status
+- Bot override state
+- Cryptographic signature for verification
+
+---
+
+# License
+
+MIT – Use freely.
+
+---
+
+# Credits
+
+- RobTop – Official CBF implementation.
+- Geode SDK Team – Modding framework.
+- Pointercrate – CBF legitimacy clarification.
+
+---
+
+
+# Support 
+
+- Github Issues
+- Discord Server (no for now)
+
+---
+
+Push your skill beyond the frames 🤍
