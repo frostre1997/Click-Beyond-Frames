@@ -20,7 +20,6 @@ jobs:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
-      GEODE_PROFILE_PATH: ${{ github.workspace }}/dummy_profile  # <-- profile path
 
     steps:
       - name: Checkout repository
@@ -35,11 +34,8 @@ jobs:
 
       - name: Setup dummy Geode profile
         run: |
-          mkdir -p dummy_profile/mods
-          # Add profile (this will create the necessary files)
+          mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
-          # Override the profile path to our local folder
-          echo "GEODE_PROFILE_PATH=${{ github.workspace }}/dummy_profile" >> $GITHUB_ENV
 
       - name: Install Geode SDK (5.7.1)
         run: |
@@ -47,10 +43,6 @@ jobs:
           geode sdk update 5.7.1
           geode sdk install-binaries --platform android64 --version 5.7.1
           geode sdk install-binaries --platform android32 --version 5.7.1
-
-      - name: Install dependency (geode.node-ids)
-        run: |
-          geode mods install geode.node-ids
 
       - name: Locate loader binary
         id: locate
@@ -121,9 +113,8 @@ jobs:
 
       - name: Setup dummy Geode profile
         run: |
-          mkdir -p dummy_profile/mods
+          mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
-          echo "GEODE_PROFILE_PATH=${{ github.workspace }}/dummy_profile" >> $GITHUB_ENV
 
       - name: Install Geode SDK (5.7.1)
         run: |
