@@ -1,0 +1,22 @@
+# Build directories
+build/
+.geode_cache/
+out/
+
+# Mod binaries
+*.geode
+*.so
+*.dll
+*.dylib
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Android specific
+*.apk
+*.dex
+*.class
+local.properties
