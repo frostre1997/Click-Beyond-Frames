@@ -16,6 +16,10 @@ jobs:
       matrix:
         platform: [android64, android32]
 
+    env:
+      GEODE_SDK: ${{ github.workspace }}/geode-sdk
+      CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,19 +38,12 @@ jobs:
 
       - name: Install Geode SDK
         run: |
-          SDK_PATH="${{ github.workspace }}/geode-sdk"
-          geode sdk install "$SDK_PATH"
+          geode sdk install "$GEODE_SDK"
           geode sdk install-binaries --platform android --version v5.7.1
-        env:
-          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Build mod
         run: |
-          SDK_PATH="${{ github.workspace }}/geode-sdk"
-          geode build -p ${{ matrix.platform }} --config Release -- -DGeode_DIR="$SDK_PATH/lib/cmake/Geode" -DCMAKE_PREFIX_PATH="$SDK_PATH"
-        env:
-          GEODE_SDK: ${{ github.workspace }}/geode-sdk
-          CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
+          geode build -p ${{ matrix.platform }} --config Release --sdk "$GEODE_SDK"
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
@@ -59,6 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-android
     if: always()
+
+    env:
+      GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
     steps:
       - name: Download all artifacts
@@ -78,18 +78,13 @@ jobs:
 
       - name: Install Geode SDK (for combine)
         run: |
-          SDK_PATH="${{ github.workspace }}/geode-sdk"
-          geode sdk install "$SDK_PATH"
+          geode sdk install "$GEODE_SDK"
           geode sdk install-binaries --platform android --version v5.7.1
-        env:
-          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Combine .geode files
         run: |
           mkdir combined
           geode combine artifacts/ClickBeyondFrames-android64/*.geode artifacts/ClickBeyondFrames-android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
-        env:
-          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
