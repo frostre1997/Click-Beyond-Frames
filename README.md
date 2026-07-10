@@ -5,7 +5,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Android-green)](https://developer.android.com)
 [![Version](https://img.shields.io/badge/Version-v1.0.0-orange)](#)
 
-**Click Beyond Frames** removes the **480 TPS cap** from RobTop's official "Click Between Steps" feature, allowing for **unlimited input precision** on Android.
+**Click Beyond Frames** removes the **480 TPS cap** from RobTop's official "Click Between Steps" feature, allowing for **unlimited input precision**.
 
 ---
 
