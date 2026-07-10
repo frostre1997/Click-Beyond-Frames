@@ -27,16 +27,23 @@ jobs:
         with:
           version: latest
 
+      - name: Setup dummy Geode profile
+        run: |
+          mkdir -p dummy_profile
+          geode profile add --name dummy dummy_profile/GeometryDash.exe win
+
       - name: Install Geode SDK
         run: |
           geode sdk install
           geode sdk install-binaries --platform android
+        env:
+          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Build mod
         run: |
           geode build --target ${{ matrix.target }} --config Release
         env:
-          GEODE_SDK: ${{ env.GEODE_SDK }}
+          GEODE_SDK: ${{ github.workspace }}/geode-sdk
           CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
       - name: Upload artifact (${{ matrix.target }})
@@ -57,13 +64,22 @@ jobs:
         with:
           path: artifacts
 
+      - name: Install Geode CLI
+        uses: geode-sdk/cli/.github/actions/setup@main
+        with:
+          version: latest
+
+      - name: Setup dummy Geode profile
+        run: |
+          mkdir -p dummy_profile
+          geode profile add --name dummy dummy_profile/GeometryDash.exe win
+
       - name: Combine .geode files
         run: |
           mkdir combined
-          # The combine tool is included with Geode CLI
           geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
         env:
-          GEODE_SDK: ${{ env.GEODE_SDK }}
+          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
