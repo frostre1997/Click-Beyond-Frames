@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependency (geode.node-ids)
         run: |
-          geode install geode.node-ids --profile dummy
+          geode mod install geode.node-ids --profile dummy
 
       - name: Locate loader binary
         id: locate
@@ -88,7 +88,7 @@ jobs:
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
         env:
           GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
-          GEODE_PROFILE: dummy  # Use the dummy profile during build
+          GEODE_PROFILE: dummy
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
