@@ -5,7 +5,7 @@
     "developer": "frostre1997",
     "description": "Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android.",
     "tags": ["gameplay", "performance", "utility", "android"],
-    "geode": "v1.8.0",
+    "geode": "*",
     "gd": "2.208",
     "platforms": ["android"],
 
