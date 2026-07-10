@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [Android64, Android32]   # 64-bit and 32-bit
+        target: [Android64, Android32]
 
     steps:
       - name: Checkout repository
@@ -22,18 +22,28 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build Geode Mod
-        uses: geode-sdk/build-geode-mod@main
-        id: build
+      - name: Install Geode CLI
+        uses: geode-sdk/cli/.github/actions/setup@main
         with:
-          target: ${{ matrix.target }}
-          # No build-args needed – the action handles ABI internally
+          version: latest
+
+      - name: Install Geode SDK
+        run: |
+          geode sdk install
+          geode sdk install-binaries --platform android
+
+      - name: Build mod
+        run: |
+          geode build --target ${{ matrix.target }} --config Release
+        env:
+          GEODE_SDK: ${{ env.GEODE_SDK }}
+          CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
       - name: Upload artifact (${{ matrix.target }})
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-${{ matrix.target }}
-          path: ${{ steps.build.outputs.build-output }}
+          path: build/${{ matrix.target }}/*.geode
 
   combine:
     name: Combine Builds
@@ -42,12 +52,21 @@ jobs:
     if: always()
 
     steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
       - name: Combine .geode files
-        uses: geode-sdk/build-geode-mod/combine@main
-        id: combine
+        run: |
+          mkdir combined
+          # The combine tool is included with Geode CLI
+          geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
+        env:
+          GEODE_SDK: ${{ env.GEODE_SDK }}
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-Combined
-          path: ${{ steps.combine.outputs.build-output }}
+          path: combined/*.geode
