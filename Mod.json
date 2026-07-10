@@ -1,8 +1,8 @@
 {
-    "id": "yourname.cbf-beyond",
-    "name": "CBF Beyond",
+    "id": "frostre1997.Click-Beyond-Frames",
+    "name": "Click Beyond Frames",
     "version": "v1.0.0",
-    "developer": "YourName",
+    "developer": "frostre1997",
     "description": "Click Beyond Frames. Removes the 480 TPS limit from RobTop's official CBF implementation for maximum input precision.",
     "tags": ["gameplay", "performance", "utility", "android"],
     "geode": "v1.8.0",
