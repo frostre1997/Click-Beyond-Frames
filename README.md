@@ -35,7 +35,7 @@
 | :--- | :--- |
 | **Geometry Dash** | 2.208 |
 | **Geode Loader** | v1.8.0 |
-| **Platform** | Android (ARM 32 & 64) |
+| **Platform** | Android (ARM 32bit & 64bit)
 
 ---
 
@@ -139,7 +139,7 @@ MIT – Use freely.
 # Support 
 
 - Github Issues
-- Discord Server (no for now)
+- Discord Server (coming soon)
 
 ---
 
