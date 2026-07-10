@@ -8,6 +8,9 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+# Add the API headers from the submodule
+target_include_directories(${PROJECT_NAME} PRIVATE api/include)
+
 project(Template VERSION 1.0.0)
 
 # Add all source files inside src (recursively)
