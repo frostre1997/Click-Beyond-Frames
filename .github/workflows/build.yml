@@ -9,12 +9,12 @@ on:
 
 jobs:
   build-android:
-    name: Android (${{ matrix.abi }})
+    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        abi: [arm64-v8a, armeabi-v7a]   # 64-bit and 32-bit
+        target: [Android64, Android32]   # 64-bit and 32-bit
 
     steps:
       - name: Checkout repository
@@ -26,13 +26,13 @@ jobs:
         uses: geode-sdk/build-geode-mod@main
         id: build
         with:
-          target: android   # Required by the action
-          build-args: --platform android --abi ${{ matrix.abi }}
+          target: ${{ matrix.target }}
+          # No build-args needed – the action handles ABI internally
 
-      - name: Upload artifact (${{ matrix.abi }})
+      - name: Upload artifact (${{ matrix.target }})
         uses: actions/upload-artifact@v4
         with:
-          name: ClickBeyondFrames-${{ matrix.abi }}
+          name: ClickBeyondFrames-${{ matrix.target }}
           path: ${{ steps.build.outputs.build-output }}
 
   combine:
