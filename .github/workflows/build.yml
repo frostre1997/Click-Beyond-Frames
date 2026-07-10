@@ -49,8 +49,6 @@ jobs:
           export MOD_VERSION="v1.0.0"
           export MOD_DEVELOPER="frostre1997"
           export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
-
-          # Use envsubst to replace variables in the template
           envsubst < mod.json.template > mod.json
 
       - name: Build mod
