@@ -8,9 +8,6 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-# Add the API headers from the submodule
-target_include_directories(${PROJECT_NAME} PRIVATE api/include)
-
 project(Template VERSION 1.0.0)
 
 # Add all source files inside src (recursively)
@@ -18,6 +15,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 # Set up the mod binary
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+# --- ADD THIS LINE ---
+target_include_directories(${PROJECT_NAME} PRIVATE api/include)
+# --- END ADD ---
 
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
