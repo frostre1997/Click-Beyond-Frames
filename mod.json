@@ -1,32 +1,35 @@
 {
-    "id": "frostre1997.Click-Beyond-Frames",
+    "id": "frostre1997.click-beyond-frames",
     "name": "Click Beyond Frames",
     "version": "v1.0.0",
     "developer": "frostre1997",
-    "description": "Click Beyond Frames. Removes the 480 TPS limit from RobTop's official CBF implementation for maximum input precision.",
+    "description": "Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android.",
     "tags": ["gameplay", "performance", "utility", "android"],
     "geode": "v1.8.0",
     "gd": "2.208",
     "platforms": ["android"],
-    
+
+    "dependencies": {
+        "frostre1997.click-beyond-frames-api": {
+            "version": ">=v1.0.0",
+            "required": true
+        }
+    },
+
     "settings": {
         "cbf-enabled": {
             "name": "Enable CBF",
-            "description": "Toggle Click Beyond Frames on/off",
+            "description": "Toggle the mod on/off",
             "type": "bool",
             "default": true
         },
         "polling-rate": {
             "name": "Polling Rate (Hz)",
-            "description": "Higher = more precise, uses more CPU. Vanilla cap is 480.",
+            "description": "Higher = more precise. Vanilla cap is 480.",
             "type": "int",
             "default": 1000,
             "min": 60,
             "max": 2000
         }
-    },
-
-    "api": {
-        "include": ["include/CBFBeyond"]
     }
 }
