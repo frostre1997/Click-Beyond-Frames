@@ -36,19 +36,9 @@ jobs:
           mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
 
-      - name: Install newer NDK
+      - name: Install Geode SDK (v5.7.1)
         run: |
-          # Remove the old NDK (v27)
-          rm -rf /usr/local/lib/android/sdk/ndk/*
-          # Install NDK r28
-          wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
-          unzip android-ndk-r28-linux.zip -d /usr/local/lib/android/sdk/ndk/
-          # Set the new NDK path
-          echo "ANDROID_NDK=/usr/local/lib/android/sdk/ndk/android-ndk-r28" >> $GITHUB_ENV
-
-      - name: Install Geode SDK
-        run: |
-          geode sdk install "$GEODE_SDK"
+          geode sdk install "$GEODE_SDK" --version v5.7.1
           geode sdk install-binaries --platform android --version v5.7.1
 
       - name: Generate mod.json from template
@@ -96,7 +86,7 @@ jobs:
           mkdir -p dummy_profile
           geode profile add --name dummy dummy_profile/GeometryDash.exe win
 
-      - name: Install Geode SDK (for combine)
+      - name: Install Geode SDK (v5.7.1)
         run: |
           geode sdk install "$GEODE_SDK" --version v5.7.1
           geode sdk install-binaries --platform android --version v5.7.1
