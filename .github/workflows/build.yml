@@ -18,7 +18,6 @@ jobs:
 
     env:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
-      GEODE_BINARY_DIR: ${{ github.workspace }}/geode-sdk/binaries  # explicitly set
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
 
@@ -42,14 +41,29 @@ jobs:
         run: |
           geode sdk install "$GEODE_SDK"
           geode sdk update 5.7.1
+          # Install binaries for both ABIs (the CLI handles this automatically)
           geode sdk install-binaries --platform android --version 5.7.1
 
-      - name: Debug - list installed binaries
+      - name: Debug - list binary directories
         run: |
-          echo "Contents of $GEODE_SDK/binaries/android:"
-          ls -la $GEODE_SDK/binaries/android/ || echo "Directory not found"
           echo "Contents of $GEODE_SDK/binaries:"
-          ls -la $GEODE_SDK/binaries/ || echo "Directory not found"
+          ls -laR $GEODE_SDK/binaries/ || echo "Directory not found"
+
+      - name: Locate loader binary
+        id: locate
+        run: |
+          # Search for libgeode_loader.so (Android loader)
+          LOADER=$(find $GEODE_SDK/binaries -name "libgeode_loader.so" | head -n1)
+          if [ -n "$LOADER" ]; then
+            BIN_DIR=$(dirname "$LOADER")
+            echo "Found loader at $LOADER"
+            echo "GEODE_BINARY_DIR=$BIN_DIR" >> $GITHUB_ENV
+            echo "BIN_DIR=$BIN_DIR" >> $GITHUB_OUTPUT
+          else
+            echo "Loader not found! Trying to find any .so file..."
+            find $GEODE_SDK/binaries -name "*.so" | head -n5
+            exit 1
+          fi
 
       - name: Download Android NDK r28 (Clang 19+)
         run: |
@@ -71,7 +85,7 @@ jobs:
         run: |
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
         env:
-          GEODE_BINARY_DIR: ${{ github.workspace }}/geode-sdk/binaries  # Pass to build environment
+          GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}  # Pass the discovered path
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
