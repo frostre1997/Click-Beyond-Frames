@@ -136,9 +136,12 @@ MIT – Use freely.
 ---
 
 
-# Support 
+# Support
+
+If you want to contribute or help this repository:
 
 - Github Issues
+- Fork the repository
 - Discord Server (coming soon)
 
 ---
