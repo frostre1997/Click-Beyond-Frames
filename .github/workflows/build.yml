@@ -19,6 +19,7 @@ jobs:
     env:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
+      ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
 
     steps:
       - name: Checkout repository
@@ -42,6 +43,12 @@ jobs:
           geode sdk update v5.7.1
           geode sdk install-binaries --platform android --version v5.7.1
 
+      - name: Download Android NDK r28 (Clang 19+)
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+          unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
+          echo "ANDROID_NDK_HOME=${{ github.workspace }}/android-ndk-r28" >> $GITHUB_ENV
+
       - name: Generate mod.json from template
         run: |
           export GEODE_VERSION="v5.7.1"
@@ -54,7 +61,7 @@ jobs:
 
       - name: Build mod
         run: |
-          geode build -p ${{ matrix.platform }} --config Release
+          geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME"
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
