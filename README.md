@@ -54,7 +54,7 @@ cd Click-Beyond-Frames
 geode install frostre1997.Click-Beyond-Frames-API
 
 ## Option B: Use Git submodule
-- git submodule add https://github.com/frostre1997/Click-Beyond-Frames.git api
+- git submodule add https://github.com/frostre1997/Click-Beyond-Frames-API.git
 
 - git submodule update --init --recursive
 
