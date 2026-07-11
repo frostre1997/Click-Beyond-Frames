@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-android:
-    name: ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,7 +31,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ninja-build zip
 
       - name: Install Geode CLI
         uses: geode-sdk/cli/.github/actions/setup@main
@@ -86,41 +86,27 @@ jobs:
     needs: build-android
     if: always()
 
-    env:
-      GEODE_SDK: ${{ github.workspace }}/geode-sdk
-      GEODE_VERSION: "5.8.1"
-
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
-      - name: Install Geode CLI
-        uses: geode-sdk/cli/.github/actions/setup@main
-        with:
-          version: latest
-
-      - name: Setup dummy Geode profile
-        run: |
-          mkdir -p dummy_profile
-          geode profile add --name dummy dummy_profile/GeometryDash.exe win
-
-      - name: Install Geode SDK (${{ env.GEODE_VERSION }})
-        run: |
-          geode sdk install "$GEODE_SDK"
-          geode sdk update ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
+      - name: Show downloaded files
+        run: ls -R artifacts
 
       - name: Pack release zip
         run: |
           mkdir -p combined
-          zip -j combined/frostre1997.click-beyond-frames.zip \
-            artifacts/ClickBeyondFrames-android64/*.geode \
-            artifacts/ClickBeyondFrames-android32/*.geode
+          files=$(find artifacts -name '*.geode' -print)
+          if [ -z "$files" ]; then
+            echo "No .geode files found"
+            exit 1
+          fi
+          zip -j combined/frostre1997.click-beyond-frames.zip $files
 
-      - name: Upload Combined Artifact
+      - name: Upload Packed Artifact
         uses: actions/upload-artifact@v4
         with:
           name: frostre1997.click-beyond-frames
