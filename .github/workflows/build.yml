@@ -68,7 +68,6 @@ jobs:
       - name: Build mod
         run: |
           geode build \
-            --sdk "$GEODE_SDK" \
             -p ${{ matrix.platform }} \
             --config Release \
             --ndk "$ANDROID_NDK" \
