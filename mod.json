@@ -4,17 +4,21 @@
     "version": "v1.0.0",
     "developer": "frostre1997",
     "description": "Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android.",
-    "geode": "v5.7.1",
+    "geode": "5.8.1",
+    "gd": {
+        "win": "2.2081",
+        "android": "2.2081",
+        "mac": "2.2081",
+        "ios": "2.2081"
+    },
     "tags": ["gameplay", "performance", "utility", "android"],
     "platforms": ["android"],
-
     "dependencies": {
         "frostre1997.click-beyond-frames-api": {
             "version": ">=v1.0.0",
             "required": true
         }
     },
-
     "settings": {
         "cbf-enabled": {
             "name": "Enable Click Beyond Frames",
