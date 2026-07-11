@@ -110,92 +110,37 @@ void inputThreadFunc() {
             auto pl = PlayLayer::get();
             if (!pl || pl->m_isPaused) continue;
 
+            // Just track the hold state for touch handling
             bool held = g_touchHeld.load();
-            bool wasHolding = g_holding.load();
+            g_holding = held;
+            g_inputCount++;
             
-            if (held && !wasHolding) {
-                if (g_holding.compare_exchange_strong(wasHolding, true)) {
-                    if (g_smoothMode.load()) {
-                        int tail = g_queueTail.load();
-                        int nextTail = (tail + 1) % QUEUE_SIZE;
-                        
-                        if (nextTail != g_queueHead.load()) {
-                            auto& event = g_inputQueue[tail];
-                            event.timestamp = std::chrono::steady_clock::now();
-                            event.isPress = true;
-                            g_queueTail = nextTail;
-                            g_inputQueueSize++;
-                        }
-                    }
-                    
-                    if (!g_smoothMode.load()) {
-                        pl->pushButton(0);
-                        g_inputCount++;
-                    }
-                    
-                    if (g_trackPrecision.load()) {
-                        auto offset = calculateSubFrameOffset();
-                        g_clickOffsets.push_back(offset);
-                        
-                        if (g_clickOffsets.size() > MAX_PRECISION_SAMPLES) {
-                            g_clickOffsets.erase(g_clickOffsets.begin());
-                        }
-                        
-                        long long totalOffset = 0;
-                        for (auto o : g_clickOffsets) {
-                            totalOffset += o.count();
-                        }
-                        g_avgPrecisionMs = totalOffset / (float)g_clickOffsets.size() / 1000.0f;
-                        
-                        float fps = g_currentFps.load();
-                        if (fps > 0) {
-                            auto halfFrameUs = std::chrono::microseconds((int)(500000.0f / fps));
-                            int subFrameCount = 0;
-                            for (auto o : g_clickOffsets) {
-                                if (o < halfFrameUs) {
-                                    subFrameCount++;
-                                }
-                            }
-                            g_subFrameClicks = subFrameCount;
-                            g_totalClicks = g_clickOffsets.size();
-                        }
-                    }
+            // Track precision
+            if (g_trackPrecision.load()) {
+                auto offset = calculateSubFrameOffset();
+                g_clickOffsets.push_back(offset);
+                
+                if (g_clickOffsets.size() > MAX_PRECISION_SAMPLES) {
+                    g_clickOffsets.erase(g_clickOffsets.begin());
                 }
-            } else if (!held && wasHolding) {
-                if (g_holding.compare_exchange_strong(wasHolding, false)) {
-                    if (g_smoothMode.load()) {
-                        int tail = g_queueTail.load();
-                        int nextTail = (tail + 1) % QUEUE_SIZE;
-                        
-                        if (nextTail != g_queueHead.load()) {
-                            auto& event = g_inputQueue[tail];
-                            event.timestamp = std::chrono::steady_clock::now();
-                            event.isPress = false;
-                            g_queueTail = nextTail;
-                            g_inputQueueSize++;
+                
+                long long totalOffset = 0;
+                for (auto o : g_clickOffsets) {
+                    totalOffset += o.count();
+                }
+                g_avgPrecisionMs = totalOffset / (float)g_clickOffsets.size() / 1000.0f;
+                
+                float fps = g_currentFps.load();
+                if (fps > 0) {
+                    auto halfFrameUs = std::chrono::microseconds((int)(500000.0f / fps));
+                    int subFrameCount = 0;
+                    for (auto o : g_clickOffsets) {
+                        if (o < halfFrameUs) {
+                            subFrameCount++;
                         }
                     }
-                    
-                    if (!g_smoothMode.load()) {
-                        pl->releaseButton(0);
-                    }
-                }
-            }
-            
-            if (g_smoothMode.load() && g_inputQueueSize.load() > 0) {
-                int head = g_queueHead.load();
-                if (head != g_queueTail.load()) {
-                    auto& event = g_inputQueue[head];
-                    
-                    if (event.isPress) {
-                        pl->pushButton(0);
-                        g_inputCount++;
-                    } else {
-                        pl->releaseButton(0);
-                    }
-                    
-                    g_queueHead = (head + 1) % QUEUE_SIZE;
-                    g_inputQueueSize--;
+                    g_subFrameClicks = subFrameCount;
+                    g_totalClicks = g_clickOffsets.size();
                 }
             }
         } else {
@@ -283,7 +228,7 @@ class $modify(PlayLayer) {
         } else if (g_showTps.load()) {
             sprintf(buffer, "TPS: 0");
         } else {
-            sprintf(buffer, "");
+            buffer[0] = '';
         }
         
         g_counterLabel = CCLabelBMFont::create(buffer, "goldFont.fnt");
