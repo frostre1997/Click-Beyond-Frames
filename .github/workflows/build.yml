@@ -1,4 +1,4 @@
-name: Build Geode Mod
+name: Build Geode Mod (Android)
 
 on:
   workflow_dispatch:
@@ -50,7 +50,7 @@ jobs:
           geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
 
-      - name: Download Android NDK r28 (Clang 19+)
+      - name: Download Android NDK r28
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r28-linux.zip
           unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
@@ -79,7 +79,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-${{ matrix.platform }}
-          # geode build outputs .geode into build/<platform>
           path: build/${{ matrix.platform }}/*.geode
 
   combine:
@@ -121,10 +120,10 @@ jobs:
           geode combine \
             artifacts/ClickBeyondFrames-android64/*.geode \
             artifacts/ClickBeyondFrames-android32/*.geode \
-            -o combined/frostre1997.ClickBeyondFrames.geode
+            -o combined/frostre1997.click-beyond-frames.geode
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frostre1997.ClickBeyondFrames
-          path: combined/frostre1997.ClickBeyondFrames.geode
+          name: frostre1997.click-beyond-frames
+          path: combined/frostre1997.click-beyond-frames.geode
