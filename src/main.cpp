@@ -1,9 +1,13 @@
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/CCApplication.hpp>
+#include <Geode/modify/CCDirector.hpp>
 #include <Geode/loader/Mod.hpp>
 
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <array>
+#include <vector>
 
 using namespace geode::prelude;
 
@@ -11,14 +15,90 @@ using namespace geode::prelude;
 std::atomic<bool> g_cbfEnabled = true;
 std::atomic<int> g_pollingRate = 1000;
 std::atomic<bool> g_threadRunning = false;
+std::atomic<bool> g_touchHeld = false;
 std::atomic<bool> g_holding = false;
 std::thread g_inputThread;
 
+// ===== Counter Settings =====
+std::atomic<bool> g_showCounter = false;
+std::atomic<float> g_counterScale = 0.5f;
+std::atomic<float> g_counterPosX = 0.0f;
+std::atomic<float> g_counterPosY = 0.0f;
+std::atomic<bool> g_showFps = true;
+std::atomic<bool> g_showTps = true;
+std::atomic<int> g_counterColor = 0;
+
+// FPS/TPS data
+std::atomic<float> g_currentFps = 0.0f;
+std::atomic<int> g_currentTps = 0;
+
+std::chrono::steady_clock::time_point g_lastUpdate = std::chrono::steady_clock::now();
+int g_frameCount = 0;
+int g_inputCount = 0;
+
+CCLabelBMFont* g_counterLabel = nullptr;
+
+constexpr float UPDATE_INTERVAL = 0.5f;
+
+// Color presets
+ccColor3B COLOR_WHITE = {255, 255, 255};
+ccColor3B COLOR_GREEN = {0, 255, 0};
+ccColor3B COLOR_YELLOW = {255, 255, 0};
+ccColor3B COLOR_RED = {255, 0, 0};
+
+ccColor3B getColor(int index) {
+    switch (index) {
+        case 1: return COLOR_GREEN;
+        case 2: return COLOR_YELLOW;
+        case 3: return COLOR_RED;
+        default: return COLOR_WHITE;
+    }
+}
+
+// ===== Smooth Mode =====
+std::atomic<bool> g_smoothMode = true;
+std::atomic<int> g_inputQueueSize = 0;
+
+constexpr int QUEUE_SIZE = 16;
+struct InputEvent {
+    std::chrono::steady_clock::time_point timestamp;
+    bool isPress;
+};
+std::array<InputEvent, QUEUE_SIZE> g_inputQueue;
+std::atomic<int> g_queueHead = 0;
+std::atomic<int> g_queueTail = 0;
+
+// ===== Input Precision =====
+std::atomic<bool> g_trackPrecision = false;
+std::atomic<float> g_avgPrecisionMs = 0.0f;
+std::atomic<int> g_subFrameClicks = 0;
+std::atomic<int> g_totalClicks = 0;
+
+std::vector<std::chrono::microseconds> g_clickOffsets;
+std::chrono::steady_clock::time_point g_lastFrameTime;
+
+constexpr int MAX_PRECISION_SAMPLES = 1000;
+
+std::chrono::microseconds calculateSubFrameOffset() {
+    auto now = std::chrono::steady_clock::now();
+    auto timeSinceLastFrame = std::chrono::duration_cast<std::chrono::microseconds>(
+        now - g_lastFrameTime
+    );
+    
+    float fps = g_currentFps.load();
+    if (fps <= 0) fps = 60.0f;
+    auto frameTimeUs = std::chrono::microseconds((int)(1000000.0f / fps));
+    
+    auto offsetInFrame = timeSinceLastFrame % frameTimeUs;
+    auto halfFrame = frameTimeUs / 2;
+    if (offsetInFrame < halfFrame) {
+        return offsetInFrame;
+    } else {
+        return frameTimeUs - offsetInFrame;
+    }
+}
+
 // ===== Input Thread =====
-// This version does NOT try to construct CCTouch manually.
-// Instead, it just toggles a flag that you can wire to your own input source
-// (e.g. a UI button, another mod, or a custom layer you add later).
-// If you want "always on", just ignore g_holding and always run the tap logic.
 void inputThreadFunc() {
     g_threadRunning = true;
     while (g_threadRunning.load()) {
@@ -30,23 +110,93 @@ void inputThreadFunc() {
             auto pl = PlayLayer::get();
             if (!pl || pl->m_isPaused) continue;
 
-            // If you want the mod to always click, just remove the `if (g_holding)` check
-            // and always execute the block below.
-            if (g_holding.load()) {
-                // Placeholder for "do a click".
-                // Because CCTouch::create() is not available and constructing
-                // CCTouch manually fails, you should implement the actual clicking
-                // in a way that matches your GD version's bindings.
-                //
-                // Common options:
-                //   - Hook into an existing button (e.g. play button) and call its callback.
-                //   - Add your own CCLayer that receives real touches and forwards them.
-                //   - Use a different input source (e.g. a UI toggle) that already
-                //     integrates with GD's event system.
-                //
-                // For now, this is a no-op placeholder that at least compiles.
-                // Replace this with your actual click implementation once you know
-                // which API your bindings expose for simulating input.
+            bool held = g_touchHeld.load();
+            bool wasHolding = g_holding.load();
+            
+            if (held && !wasHolding) {
+                if (g_holding.compare_exchange_strong(wasHolding, true)) {
+                    if (g_smoothMode.load()) {
+                        int tail = g_queueTail.load();
+                        int nextTail = (tail + 1) % QUEUE_SIZE;
+                        
+                        if (nextTail != g_queueHead.load()) {
+                            auto& event = g_inputQueue[tail];
+                            event.timestamp = std::chrono::steady_clock::now();
+                            event.isPress = true;
+                            g_queueTail = nextTail;
+                            g_inputQueueSize++;
+                        }
+                    }
+                    
+                    if (!g_smoothMode.load()) {
+                        pl->pushButton(0);
+                        g_inputCount++;
+                    }
+                    
+                    if (g_trackPrecision.load()) {
+                        auto offset = calculateSubFrameOffset();
+                        g_clickOffsets.push_back(offset);
+                        
+                        if (g_clickOffsets.size() > MAX_PRECISION_SAMPLES) {
+                            g_clickOffsets.erase(g_clickOffsets.begin());
+                        }
+                        
+                        long long totalOffset = 0;
+                        for (auto o : g_clickOffsets) {
+                            totalOffset += o.count();
+                        }
+                        g_avgPrecisionMs = totalOffset / (float)g_clickOffsets.size() / 1000.0f;
+                        
+                        float fps = g_currentFps.load();
+                        if (fps > 0) {
+                            auto halfFrameUs = std::chrono::microseconds((int)(500000.0f / fps));
+                            int subFrameCount = 0;
+                            for (auto o : g_clickOffsets) {
+                                if (o < halfFrameUs) {
+                                    subFrameCount++;
+                                }
+                            }
+                            g_subFrameClicks = subFrameCount;
+                            g_totalClicks = g_clickOffsets.size();
+                        }
+                    }
+                }
+            } else if (!held && wasHolding) {
+                if (g_holding.compare_exchange_strong(wasHolding, false)) {
+                    if (g_smoothMode.load()) {
+                        int tail = g_queueTail.load();
+                        int nextTail = (tail + 1) % QUEUE_SIZE;
+                        
+                        if (nextTail != g_queueHead.load()) {
+                            auto& event = g_inputQueue[tail];
+                            event.timestamp = std::chrono::steady_clock::now();
+                            event.isPress = false;
+                            g_queueTail = nextTail;
+                            g_inputQueueSize++;
+                        }
+                    }
+                    
+                    if (!g_smoothMode.load()) {
+                        pl->releaseButton(0);
+                    }
+                }
+            }
+            
+            if (g_smoothMode.load() && g_inputQueueSize.load() > 0) {
+                int head = g_queueHead.load();
+                if (head != g_queueTail.load()) {
+                    auto& event = g_inputQueue[head];
+                    
+                    if (event.isPress) {
+                        pl->pushButton(0);
+                        g_inputCount++;
+                    } else {
+                        pl->releaseButton(0);
+                    }
+                    
+                    g_queueHead = (head + 1) % QUEUE_SIZE;
+                    g_inputQueueSize--;
+                }
             }
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -54,19 +204,59 @@ void inputThreadFunc() {
     }
 }
 
+// ===== CCDirector Hook =====
+class $modify(CCDirector) {
+    void visit() {
+        g_lastFrameTime = std::chrono::steady_clock::now();
+        
+        CCDirector::visit();
+        
+        g_frameCount++;
+        
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration<float>(now - g_lastUpdate).count();
+        
+        if (elapsed >= UPDATE_INTERVAL) {
+            g_currentFps = g_frameCount / elapsed;
+            g_currentTps = g_inputCount / elapsed;
+            
+            g_frameCount = 0;
+            g_inputCount = 0;
+            g_lastUpdate = now;
+            
+            if (g_showCounter.load() && g_counterLabel) {
+                char buffer[64];
+                if (g_showFps.load() && g_showTps.load()) {
+                    sprintf(buffer, "FPS: %.0f | TPS: %d", 
+                            g_currentFps.load(), 
+                            g_currentTps.load());
+                } else if (g_showFps.load()) {
+                    sprintf(buffer, "FPS: %.0f", g_currentFps.load());
+                } else if (g_showTps.load()) {
+                    sprintf(buffer, "TPS: %d", g_currentTps.load());
+                } else {
+                    buffer[0] = '';
+                }
+                g_counterLabel->setString(buffer);
+                g_counterLabel->setColor(getColor(g_counterColor.load()));
+            }
+        }
+    }
+};
+
 // ===== PlayLayer Hooks =====
 class $modify(PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool isPractice) {
         if (!PlayLayer::init(level, useReplay, isPractice)) return false;
 
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
-            // Fixed multiline string – all on one line with 
-
             FLAlertLayer::create(
                 "Click Beyond Frames",
-                R"(This mod exceeds RobTop's 480 TPS cap.
-                        Records above 480 Hz may be rejected on some lists.
-                        Use at your own discretion.)",
+                "This mod exceeds RobTop's 480 TPS cap.
+"
+                "Records above 480 Hz may be rejected on some lists.
+"
+                "Use at your own discretion.",
                 "OK"
             )->show();
             Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
@@ -79,6 +269,39 @@ class $modify(PlayLayer) {
         g_threadRunning = true;
         g_holding = false;
         g_inputThread = std::thread(inputThreadFunc);
+
+        // Create counter label
+        if (g_counterLabel) {
+            g_counterLabel->removeFromParentAndCleanup(true);
+        }
+        
+        char buffer[64];
+        if (g_showFps.load() && g_showTps.load()) {
+            sprintf(buffer, "FPS: 0 | TPS: 0");
+        } else if (g_showFps.load()) {
+            sprintf(buffer, "FPS: 0");
+        } else if (g_showTps.load()) {
+            sprintf(buffer, "TPS: 0");
+        } else {
+            sprintf(buffer, "");
+        }
+        
+        g_counterLabel = CCLabelBMFont::create(buffer, "goldFont.fnt");
+        g_counterLabel->setScale(g_counterScale.load());
+        g_counterLabel->setAnchorPoint(ccp(1.0f, 1.0f));
+        g_counterLabel->setPosition(ccp(
+            CCDirector::sharedDirector()->getWinSize().width - 10 + g_counterPosX.load(),
+            CCDirector::sharedDirector()->getWinSize().height - 10 + g_counterPosY.load()
+        ));
+        g_counterLabel->setVisible(g_showCounter.load());
+        g_counterLabel->setOpacity(200);
+        g_counterLabel->setColor(getColor(g_counterColor.load()));
+        this->addChild(g_counterLabel, 10000);
+
+        g_frameCount = 0;
+        g_inputCount = 0;
+        g_lastUpdate = std::chrono::steady_clock::now();
+
         return true;
     }
 
@@ -87,7 +310,40 @@ class $modify(PlayLayer) {
         if (g_inputThread.joinable()) {
             g_inputThread.join();
         }
+        
+        if (g_counterLabel) {
+            g_counterLabel->removeFromParentAndCleanup(true);
+            g_counterLabel = nullptr;
+        }
+        
         PlayLayer::onExit();
+    }
+};
+
+// ===== Touch overrides =====
+class $modify(CCApplication) {
+    bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
+        if (g_cbfEnabled.load() && PlayLayer::get()) {
+            g_touchHeld = true;
+            return true;
+        }
+        return CCApplication::ccTouchBegan(touch, event);
+    }
+
+    void ccTouchEnded(CCTouch* touch, CCEvent* event) {
+        if (g_cbfEnabled.load() && PlayLayer::get()) {
+            g_touchHeld = false;
+            return;
+        }
+        CCApplication::ccTouchEnded(touch, event);
+    }
+
+    void ccTouchCancelled(CCTouch* touch, CCEvent* event) {
+        if (g_cbfEnabled.load() && PlayLayer::get()) {
+            g_touchHeld = false;
+            return;
+        }
+        CCApplication::ccTouchCancelled(touch, event);
     }
 };
 
@@ -99,7 +355,65 @@ $on_mod(Loaded) {
     listenForSettingChanges<int>("polling-rate", [](int value) {
         g_pollingRate = value;
     });
-
-    // Example: always hold by default; you can expose this as a setting too.
-    g_holding = true;
+    listenForSettingChanges<bool>("show-counter", [](bool value) {
+        g_showCounter = value;
+        if (g_counterLabel) {
+            g_counterLabel->setVisible(value);
+        }
+    });
+    listenForSettingChanges<float>("counter-scale", [](float value) {
+        g_counterScale = value;
+        if (g_counterLabel) {
+            g_counterLabel->setScale(value);
+        }
+    });
+    listenForSettingChanges<float>("counter-pos-x", [](float value) {
+        g_counterPosX = value;
+        if (g_counterLabel) {
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
+            g_counterLabel->setPosition(ccp(
+                winSize.width - 10 + value,
+                winSize.height - 10 + g_counterPosY.load()
+            ));
+        }
+    });
+    listenForSettingChanges<float>("counter-pos-y", [](float value) {
+        g_counterPosY = value;
+        if (g_counterLabel) {
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
+            g_counterLabel->setPosition(ccp(
+                winSize.width - 10 + g_counterPosX.load(),
+                winSize.height - 10 + value
+            ));
+        }
+    });
+    listenForSettingChanges<bool>("show-fps", [](bool value) {
+        g_showFps = value;
+    });
+    listenForSettingChanges<bool>("show-tps", [](bool value) {
+        g_showTps = value;
+    });
+    listenForSettingChanges<int>("counter-color", [](int value) {
+        g_counterColor = value;
+        if (g_counterLabel) {
+            g_counterLabel->setColor(getColor(value));
+        }
+    });
+    listenForSettingChanges<bool>("smooth-mode", [](bool value) {
+        g_smoothMode = value;
+        if (!value) {
+            g_queueHead = 0;
+            g_queueTail = 0;
+            g_inputQueueSize = 0;
+        }
+    });
+    listenForSettingChanges<bool>("track-precision", [](bool value) {
+        g_trackPrecision = value;
+        if (!value) {
+            g_clickOffsets.clear();
+            g_avgPrecisionMs = 0.0f;
+            g_subFrameClicks = 0;
+            g_totalClicks = 0;
+        }
+    });
 }
