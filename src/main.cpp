@@ -1,14 +1,13 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
-#include <Geode/platform/android.hpp>   // geode::android::getActivity()
-#include <Geode/binding/GJBaseGameLayer.hpp>  // for pushButton/releaseButton
+#include <Geode/platform/android.hpp>   // geode::android::getEnv, getActivity
 
 #include <thread>
 #include <atomic>
 #include <chrono>
 #include <android/input.h>
 #include <android/looper.h>
-#include <android/native_activity.h>
+#include <jni.h>
 
 using namespace geode::prelude;
 
@@ -22,11 +21,23 @@ std::thread g_inputThread;
 std::chrono::steady_clock::time_point g_startTime;
 static AInputQueue* g_inputQueue = nullptr;
 
-// ===== Get the input queue from the native activity =====
+// ===== Get the input queue via JNI =====
 AInputQueue* getInputQueueFromActivity() {
-    ANativeActivity* activity = geode::android::getActivity();
-    if (!activity) return nullptr;
-    return activity->inputQueue;
+    JNIEnv* env = geode::android::getEnv();
+    if (!env) return nullptr;
+
+    jobject activityObj = geode::android::getActivity();
+    if (!activityObj) return nullptr;
+
+    jclass activityClass = env->GetObjectClass(activityObj);
+    jmethodID getQueue = env->GetMethodID(activityClass, "getInputQueue", "()Landroid/view/InputQueue;");
+    jobject queueObj = env->CallObjectMethod(activityObj, getQueue);
+    if (!queueObj) return nullptr;
+
+    // AInputQueue_fromJava requires API level 33, but we can use it safely
+    // if we set android:minSdkVersion to 33 in the manifest (or we can
+    // fallback to using activity->inputQueue, but that's not exposed in JNI)
+    return AInputQueue_fromJava(env, queueObj);
 }
 
 // ===== Input Thread =====
@@ -62,15 +73,14 @@ void inputThreadFunc() {
                         if (!g_holding.exchange(true)) {
                             auto pl = PlayLayer::get();
                             if (pl && !pl->m_isPaused) {
-                                // Cast to GJBaseGameLayer for pushButton
-                                static_cast<GJBaseGameLayer*>(pl)->pushButton(0);
+                                pl->pushButton(0);
                             }
                         }
                     } else if (actionMasked == AMOTION_EVENT_ACTION_UP || actionMasked == AMOTION_EVENT_ACTION_POINTER_UP) {
                         if (g_holding.exchange(false)) {
                             auto pl = PlayLayer::get();
                             if (pl) {
-                                static_cast<GJBaseGameLayer*>(pl)->releaseButton(0);
+                                pl->releaseButton(0);
                             }
                         }
                     }
@@ -86,7 +96,6 @@ void inputThreadFunc() {
 // ===== PlayLayer Hooks =====
 class $modify(PlayLayer) {
     bool init(GJGameLevel* level) {
-        // PlayLayer::init takes 3 arguments
         if (!PlayLayer::init(level, false, false)) return false;
 
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
@@ -125,7 +134,7 @@ class $modify(Application, CCApplication) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
             return true; // block original handling
         }
-        return false; // let the game handle it normally
+        return CCApplication::ccTouchBegan(touch, event);
     }
 };
 
