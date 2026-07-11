@@ -81,7 +81,7 @@ jobs:
           path: build/${{ matrix.platform }}/*.geode
 
   combine:
-    name: Combine Builds
+    name: Package Builds
     runs-on: ubuntu-latest
     needs: build-android
     if: always()
@@ -113,16 +113,15 @@ jobs:
           geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
 
-      - name: Combine .geode files
+      - name: Pack release zip
         run: |
           mkdir -p combined
-          geode combine \
+          zip -j combined/frostre1997.click-beyond-frames.zip \
             artifacts/ClickBeyondFrames-android64/*.geode \
-            artifacts/ClickBeyondFrames-android32/*.geode \
-            -o combined/frostre1997.click-beyond-frames.geode
+            artifacts/ClickBeyondFrames-android32/*.geode
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
         with:
           name: frostre1997.click-beyond-frames
-          path: combined/frostre1997.click-beyond-frames.geode
+          path: combined/frostre1997.click-beyond-frames.zip
