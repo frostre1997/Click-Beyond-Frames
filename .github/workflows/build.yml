@@ -1,79 +1,28 @@
 name: Build Geode Mod
 
 on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
+  push:
+    branches:
+      - "**"
 
 jobs:
   build-android:
-    name: Build ${{ matrix.platform }}
+    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        platform: [android64, android32]
+        target: [Android64, Android32]
 
     env:
-      GEODE_SDK: ${{ github.workspace }}/geode-sdk
-      CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
-      ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
-      GEODE_VERSION: "5.8.1"   # Updated to latest patch
-      CXXFLAGS: "-std=c++20 -D_LIBCPP_STD_VER=20"
+      GEODE_VERSION: "5.8.1"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Geode CLI
-        uses: geode-sdk/cli/.github/actions/setup@main
-        with:
-          version: latest
-
-      - name: Setup dummy Geode profile
-        run: |
-          mkdir -p dummy_profile
-          geode profile add --name dummy dummy_profile/GeometryDash.exe win
-
-      - name: Install Geode SDK (${{ env.GEODE_VERSION }})
-        run: |
-          geode sdk install "$GEODE_SDK"
-          geode sdk update ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
-
-      - name: Clean potential cached nontype_functional
-        run: |
-          rm -rf $CPM_SOURCE_CACHE/nontype_functional 2>/dev/null || true
-
-      - name: Locate loader binary
-        id: locate
-        run: |
-          if [ "${{ matrix.platform }}" = "android64" ]; then
-            ABI="64"
-          else
-            ABI="32"
-          fi
-          LOADER="$GEODE_SDK/bin/${{ env.GEODE_VERSION }}/Geode.android${ABI}.so"
-          if [ -f "$LOADER" ]; then
-            BIN_DIR=$(dirname "$LOADER")
-            echo "Found loader at $LOADER"
-            echo "GEODE_BINARY_DIR=$BIN_DIR" >> $GITHUB_ENV
-            echo "BIN_DIR=$BIN_DIR" >> $GITHUB_OUTPUT
-          else
-            echo "Loader not found at $LOADER"
-            exit 1
-          fi
-
-      - name: Download Android NDK r28 (Clang 19+)
-        run: |
-          wget -q https://dl.google.com/android/repository/android-ndk-r28-linux.zip
-          unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
-          echo "ANDROID_NDK_HOME=${{ github.workspace }}/android-ndk-r28" >> $GITHUB_ENV
 
       - name: Generate mod.json from template
         run: |
@@ -85,22 +34,24 @@ jobs:
           export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
           envsubst < mod.json.template > mod.json
 
-      - name: Build mod
-        run: |
-          geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- \
-            -DCMAKE_CXX_STANDARD=20 \
-            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-            -DCMAKE_CXX_EXTENSIONS=OFF \
-            -DCMAKE_CXX_FLAGS="-std=c++20 -D_LIBCPP_STD_VER=20" \
+      - name: Build the mod
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          target: ${{ matrix.target }}
+          build-config: Release
+          android-ndk-version: 28
+          build-args: |
+            -DCMAKE_CXX_STANDARD=20
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON
+            -DCMAKE_CXX_EXTENSIONS=ON
+            -DCMAKE_CXX_FLAGS="-std=gnu++20 -D_LIBCPP_STD_VER=20"
             -DGEODE_UNITY_BUILD=OFF
-        env:
-          GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
 
-      - name: Upload artifact (${{ matrix.platform }})
+      - name: Upload artifact (${{ matrix.target }})
         uses: actions/upload-artifact@v4
         with:
-          name: ClickBeyondFrames-${{ matrix.platform }}
-          path: build/${{ matrix.platform }}/*.geode
+          name: ClickBeyondFrames-${{ matrix.target }}
+          path: build/${{ matrix.target }}/*.geode
 
   combine:
     name: Combine Builds
@@ -108,39 +59,18 @@ jobs:
     needs: build-android
     if: always()
 
-    env:
-      GEODE_SDK: ${{ github.workspace }}/geode-sdk
-
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Install Geode CLI
-        uses: geode-sdk/cli/.github/actions/setup@main
-        with:
-          version: latest
-
-      - name: Setup dummy Geode profile
-        run: |
-          mkdir -p dummy_profile
-          geode profile add --name dummy dummy_profile/GeometryDash.exe win
-
-      - name: Install Geode SDK (${{ env.GEODE_VERSION }})
-        run: |
-          geode sdk install "$GEODE_SDK"
-          geode sdk update ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
-
       - name: Combine .geode files
-        run: |
-          mkdir combined
-          geode combine artifacts/ClickBeyondFrames-android64/*.geode artifacts/ClickBeyondFrames-android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
+        uses: geode-sdk/build-geode-mod/combine@main
+        id: combine
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-Combined
-          path: combined/*.geode
+          path: ${{ steps.combine.outputs.build-output }}
