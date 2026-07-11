@@ -32,5 +32,5 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 setup_geode_mod(${PROJECT_NAME})
 
-# ADD INCLUDE DIR AFTER SETUP TO AVOID OVERWRITE
+# IMPORTANT: Add this AFTER setup_geode_mod so it isn't overwritten
 target_include_directories(${PROJECT_NAME} PRIVATE api/include)
