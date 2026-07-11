@@ -126,3 +126,10 @@ jobs:
       - name: Combine .geode files
         run: |
           mkdir combined
+          geode combine artifacts/ClickBeyondFrames-android64/*.geode artifacts/ClickBeyondFrames-android32/*.geode -o combined/ClickBeyondFrames-Combined.geode
+
+      - name: Upload Combined Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClickBeyondFrames-Combined
+          path: combined/*.geode
