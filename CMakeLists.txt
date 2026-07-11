@@ -14,15 +14,13 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 set(GEODE_UNITY_BUILD OFF CACHE BOOL "Disable Unity builds" FORCE)
 
-# Optional: allow building without GEODE_SDK locally,
-# but require it when not in CI if you want.
-if (NOT DEFINED ENV{GEODE_SDK} AND NOT DEFINED ENV{CI})
+# Require GEODE_SDK in all cases (CI sets it explicitly)
+if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
-elseif (DEFINED ENV{GEODE_SDK})
-    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
 endif()
 
-if (DEFINED ENV{GEODE_SDK})
-    add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-    setup_geode_mod(${PROJECT_NAME})
-endif()
+message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+
+add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
+
+setup_geode_mod(${PROJECT_NAME})
