@@ -70,8 +70,8 @@ jobs:
           geode build -p ${{ matrix.platform }} \
             --config Release \
             --ndk "$NDK_HOME" \
-            --generator Ninja \
             -- \
+            -G Ninja \
             -DCMAKE_CXX_STANDARD=20 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_EXTENSIONS=ON \
@@ -86,48 +86,48 @@ jobs:
           name: ClickBeyondFrames-${{ matrix.platform }}
           path: build/${{ matrix.platform }}/*.geode
 
-combine:
-  name: Combine Builds
-  runs-on: ubuntu-latest
-  needs: build-android
-  if: always()
+  combine:
+    name: Combine Builds
+    runs-on: ubuntu-latest
+    needs: build-android
+    if: always()
 
-  env:
-    GEODE_SDK: ${{ github.workspace }}/geode-sdk
-    GEODE_VERSION: "5.8.1"
+    env:
+      GEODE_SDK: ${{ github.workspace }}/geode-sdk
+      GEODE_VERSION: "5.8.1"
 
-  steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-    - name: Install Geode CLI
-      uses: geode-sdk/cli/.github/actions/setup@main
-      with:
-        version: latest
+      - name: Install Geode CLI
+        uses: geode-sdk/cli/.github/actions/setup@main
+        with:
+          version: latest
 
-    - name: Setup dummy Geode profile
-      run: |
-        mkdir -p dummy_profile
-        geode profile add --name dummy dummy_profile/GeometryDash.exe win
+      - name: Setup dummy Geode profile
+        run: |
+          mkdir -p dummy_profile
+          geode profile add --name dummy dummy_profile/GeometryDash.exe win
 
-    - name: Install Geode SDK (${{ env.GEODE_VERSION }})
-      run: |
-        geode sdk install "$GEODE_SDK"
-        geode sdk update ${{ env.GEODE_VERSION }}
-        geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
-        geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
+      - name: Install Geode SDK (${{ env.GEODE_VERSION }})
+        run: |
+          geode sdk install "$GEODE_SDK"
+          geode sdk update ${{ env.GEODE_VERSION }}
+          geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
+          geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
 
-    - name: Combine .geode files
-      run: |
-        mkdir combined
-        geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/frostre1997.ClickBeyondFrames.geode
-      env:
-        GEODE_BINARY_DIR: ${{ env.GEODE_SDK }}/bin/${{ env.GEODE_VERSION }}
+      - name: Combine .geode files
+        run: |
+          mkdir combined
+          geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/frostre1997.ClickBeyondFrames.geode
+        env:
+          GEODE_BINARY_DIR: ${{ env.GEODE_SDK }}/bin/${{ env.GEODE_VERSION }}
 
-    - name: Upload Combined Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: frostre1997.ClickBeyondFrames
-        path: combined/frostre1997.ClickBeyondFrames.geode
+      - name: Upload Combined Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frostre1997.ClickBeyondFrames
+          path: combined/frostre1997.ClickBeyondFrames.geode
