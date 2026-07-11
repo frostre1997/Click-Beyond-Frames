@@ -80,6 +80,9 @@ jobs:
           export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
           envsubst < mod.json.template > mod.json
 
+      - name: Check API submodule
+        run: ls -la api/include/ClickBeyondFrames/
+      
       - name: Build mod
         run: |
           geode build -p ${{ matrix.platform }} \
