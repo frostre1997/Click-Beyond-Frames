@@ -14,14 +14,38 @@ std::atomic<int> g_pollingRate = 1000;
 std::atomic<bool> g_threadRunning = false;
 std::thread g_inputThread;
 
-// Counter
-std::atomic<bool> g_showCounter = true; // Changed to true by default
+// Counter Settings
+std::atomic<bool> g_showCounter = true;
+std::atomic<float> g_counterScale = 0.5f;
+std::atomic<float> g_counterPosX = 0.0f;
+std::atomic<float> g_counterPosY = 0.0f;
+std::atomic<bool> g_showFps = true;
+std::atomic<bool> g_showTps = true;
+std::atomic<int> g_counterColor = 0; // 0=white, 1=green, 2=yellow, 3=red
+
+// FPS/TPS data
 std::atomic<float> g_currentFps = 0.0f;
 std::atomic<int> g_currentTps = 0;
 std::chrono::steady_clock::time_point g_lastUpdate = std::chrono::steady_clock::now();
 int g_frameCount = 0;
 int g_inputCount = 0;
+
 CCLabelBMFont* g_counterLabel = nullptr;
+
+// Color presets
+ccColor3B COLOR_WHITE = {255, 255, 255};
+ccColor3B COLOR_GREEN = {0, 255, 0};
+ccColor3B COLOR_YELLOW = {255, 255, 0};
+ccColor3B COLOR_RED = {255, 0, 0};
+
+ccColor3B getColor(int index) {
+    switch (index) {
+        case 1: return COLOR_GREEN;
+        case 2: return COLOR_YELLOW;
+        case 3: return COLOR_RED;
+        default: return COLOR_WHITE;
+    }
+}
 
 // Input Thread
 void inputThreadFunc() {
@@ -42,7 +66,7 @@ void inputThreadFunc() {
     }
 }
 
-// CCScheduler Hook - called every frame
+// CCScheduler Hook
 class $modify(CCScheduler) {
     void update(float dt) {
         CCScheduler::update(dt);
@@ -60,8 +84,17 @@ class $modify(CCScheduler) {
             
             if (g_showCounter.load() && g_counterLabel) {
                 char buffer[64];
-                sprintf(buffer, "FPS: %.0f | TPS: %d", g_currentFps.load(), g_currentTps.load());
+                if (g_showFps.load() && g_showTps.load()) {
+                    sprintf(buffer, "FPS: %.0f | TPS: %d", g_currentFps.load(), g_currentTps.load());
+                } else if (g_showFps.load()) {
+                    sprintf(buffer, "FPS: %.0f", g_currentFps.load());
+                } else if (g_showTps.load()) {
+                    sprintf(buffer, "TPS: %d", g_currentTps.load());
+                } else {
+                    buffer[0] = '';
+                }
                 g_counterLabel->setString(buffer);
+                g_counterLabel->setColor(getColor(g_counterColor.load()));
             }
         }
     }
@@ -71,6 +104,19 @@ class $modify(CCScheduler) {
 class $modify(PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool isPractice) {
         if (!PlayLayer::init(level, useReplay, isPractice)) return false;
+
+        if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
+            FLAlertLayer::create(
+                "Click Beyond Frames",
+                "This mod exceeds RobTop's 480 TPS cap.
+"
+                "Records above 480 Hz may be rejected on some lists.
+"
+                "Use at your own discretion.",
+                "OK"
+            )->show();
+            Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
+        }
 
         if (g_inputThread.joinable()) {
             g_threadRunning = false;
@@ -83,18 +129,31 @@ class $modify(PlayLayer) {
             g_counterLabel->removeFromParentAndCleanup(true);
         }
         
-        g_counterLabel = CCLabelBMFont::create("FPS: 0 | TPS: 0", "goldFont.fnt");
-        g_counterLabel->setScale(0.5f);
+        char buffer[64];
+        if (g_showFps.load() && g_showTps.load()) {
+            sprintf(buffer, "FPS: 0 | TPS: 0");
+        } else if (g_showFps.load()) {
+            sprintf(buffer, "FPS: 0");
+        } else if (g_showTps.load()) {
+            sprintf(buffer, "TPS: 0");
+        } else {
+            buffer[0] = '';
+        }
+        
+        g_counterLabel = CCLabelBMFont::create(buffer, "goldFont.fnt");
+        g_counterLabel->setScale(g_counterScale.load());
         g_counterLabel->setAnchorPoint(ccp(1.0f, 1.0f));
         g_counterLabel->setPosition(ccp(
-            CCDirector::sharedDirector()->getWinSize().width - 10,
-            CCDirector::sharedDirector()->getWinSize().height - 10
+            CCDirector::sharedDirector()->getWinSize().width - 10 + g_counterPosX.load(),
+            CCDirector::sharedDirector()->getWinSize().height - 10 + g_counterPosY.load()
         ));
         g_counterLabel->setVisible(g_showCounter.load());
         g_counterLabel->setOpacity(200);
+        g_counterLabel->setColor(getColor(g_counterColor.load()));
         this->addChild(g_counterLabel, 10000);
 
-        log::info("CBF: Counter created, visible: {}", g_showCounter.load());
+        log::info("CBF: Counter created at ({}, {}), scale: {}, visible: {}", 
+            g_counterPosX.load(), g_counterPosY.load(), g_counterScale.load(), g_showCounter.load());
 
         return true;
     }
@@ -116,10 +175,36 @@ $on_mod(Loaded) {
     listenForSettingChanges<int>("polling-rate", [](int value) { g_pollingRate = value; });
     listenForSettingChanges<bool>("show-counter", [](bool value) {
         g_showCounter = value;
-        log::info("CBF: Counter visibility changed to: {}", value);
+        if (g_counterLabel) g_counterLabel->setVisible(value);
+    });
+    listenForSettingChanges<float>("counter-scale", [](float value) {
+        g_counterScale = value;
+        if (g_counterLabel) g_counterLabel->setScale(value);
+    });
+    listenForSettingChanges<float>("counter-pos-x", [](float value) {
+        g_counterPosX = value;
         if (g_counterLabel) {
-            g_counterLabel->setVisible(value);
-            log::info("CBF: Label visibility set to: {}", value);
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
+            g_counterLabel->setPosition(ccp(
+                winSize.width - 10 + value,
+                winSize.height - 10 + g_counterPosY.load()
+            ));
         }
+    });
+    listenForSettingChanges<float>("counter-pos-y", [](float value) {
+        g_counterPosY = value;
+        if (g_counterLabel) {
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
+            g_counterLabel->setPosition(ccp(
+                winSize.width - 10 + g_counterPosX.load(),
+                winSize.height - 10 + value
+            ));
+        }
+    });
+    listenForSettingChanges<bool>("show-fps", [](bool value) { g_showFps = value; });
+    listenForSettingChanges<bool>("show-tps", [](bool value) { g_showTps = value; });
+    listenForSettingChanges<int>("counter-color", [](int value) {
+        g_counterColor = value;
+        if (g_counterLabel) g_counterLabel->setColor(getColor(value));
     });
 }
