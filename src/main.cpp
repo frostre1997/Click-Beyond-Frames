@@ -1,5 +1,5 @@
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/CCDirector.hpp>
+#include <Geode/modify/CCScheduler.hpp>
 #include <Geode/loader/Mod.hpp>
 
 #include <thread>
@@ -15,7 +15,7 @@ std::atomic<bool> g_threadRunning = false;
 std::thread g_inputThread;
 
 // Counter
-std::atomic<bool> g_showCounter = false;
+std::atomic<bool> g_showCounter = true; // Changed to true by default
 std::atomic<float> g_currentFps = 0.0f;
 std::atomic<int> g_currentTps = 0;
 std::chrono::steady_clock::time_point g_lastUpdate = std::chrono::steady_clock::now();
@@ -42,10 +42,10 @@ void inputThreadFunc() {
     }
 }
 
-// CCDirector Hook
-class $modify(CCDirector) {
+// CCScheduler Hook - called every frame
+class $modify(CCScheduler) {
     void update(float dt) {
-        CCDirector::update(dt);
+        CCScheduler::update(dt);
         g_frameCount++;
         
         auto now = std::chrono::steady_clock::now();
@@ -91,7 +91,10 @@ class $modify(PlayLayer) {
             CCDirector::sharedDirector()->getWinSize().height - 10
         ));
         g_counterLabel->setVisible(g_showCounter.load());
+        g_counterLabel->setOpacity(200);
         this->addChild(g_counterLabel, 10000);
+
+        log::info("CBF: Counter created, visible: {}", g_showCounter.load());
 
         return true;
     }
@@ -113,6 +116,10 @@ $on_mod(Loaded) {
     listenForSettingChanges<int>("polling-rate", [](int value) { g_pollingRate = value; });
     listenForSettingChanges<bool>("show-counter", [](bool value) {
         g_showCounter = value;
-        if (g_counterLabel) g_counterLabel->setVisible(value);
+        log::info("CBF: Counter visibility changed to: {}", value);
+        if (g_counterLabel) {
+            g_counterLabel->setVisible(value);
+            log::info("CBF: Label visibility set to: {}", value);
+        }
     });
 }
