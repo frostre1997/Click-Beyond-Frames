@@ -1,5 +1,4 @@
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/CCApplication.hpp>
 #include <Geode/modify/CCDirector.hpp>
 #include <Geode/loader/Mod.hpp>
 
@@ -13,8 +12,6 @@ using namespace geode::prelude;
 std::atomic<bool> g_cbfEnabled = true;
 std::atomic<int> g_pollingRate = 1000;
 std::atomic<bool> g_threadRunning = false;
-std::atomic<bool> g_touchHeld = false;
-std::thread g_inputThread;
 
 // Counter
 std::atomic<bool> g_showCounter = false;
@@ -46,8 +43,8 @@ void inputThreadFunc() {
 
 // CCDirector Hook
 class $modify(CCDirector) {
-    void visit() {
-        CCDirector::visit();
+    void visit(float dt) {
+        CCDirector::visit(dt);
         g_frameCount++;
         
         auto now = std::chrono::steady_clock::now();
@@ -106,33 +103,6 @@ class $modify(PlayLayer) {
             g_counterLabel = nullptr;
         }
         PlayLayer::onExit();
-    }
-};
-
-// Touch overrides
-class $modify(CCApplication) {
-    bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
-        if (g_cbfEnabled.load() && PlayLayer::get()) {
-            g_touchHeld = true;
-            return true;
-        }
-        return CCApplication::ccTouchBegan(touch, event);
-    }
-
-    void ccTouchEnded(CCTouch* touch, CCEvent* event) {
-        if (g_cbfEnabled.load() && PlayLayer::get()) {
-            g_touchHeld = false;
-            return;
-        }
-        CCApplication::ccTouchEnded(touch, event);
-    }
-
-    void ccTouchCancelled(CCTouch* touch, CCEvent* event) {
-        if (g_cbfEnabled.load() && PlayLayer::get()) {
-            g_touchHeld = false;
-            return;
-        }
-        CCApplication::ccTouchCancelled(touch, event);
     }
 };
 
