@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-cmake_policy(SET CMP0175 NEW)   # <-- suppress warning
+cmake_policy(SET CMP0175 NEW)   # suppress warning
 
 project(Template VERSION 1.0.0)
 
