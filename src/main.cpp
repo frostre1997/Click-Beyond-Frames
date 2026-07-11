@@ -1,12 +1,13 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
+#include <Geode/utils/android.hpp>   // for getEnv(), getActivity()
 
 #include <thread>
 #include <atomic>
 #include <chrono>
 #include <android/input.h>
 #include <android/looper.h>
-#include <jni.h>
+#include <android/native_activity.h>
 
 using namespace geode::prelude;
 
@@ -20,32 +21,33 @@ std::thread g_inputThread;
 std::chrono::steady_clock::time_point g_startTime;
 static AInputQueue* g_inputQueue = nullptr;
 
-// ===== JNI helper =====
+// ===== Get the input queue from the native activity =====
 AInputQueue* getInputQueueFromActivity() {
-    JNIEnv* env = geode::android::getEnv();
-    if (!env) return nullptr;
-    jclass activityClass = env->FindClass("android/app/NativeActivity");
-    jmethodID getQueue = env->GetMethodID(activityClass, "getInputQueue", "()Landroid/view/InputQueue;");
-    jobject queueObj = env->CallObjectMethod(geode::android::getActivity(), getQueue);
-    if (!queueObj) return nullptr;
-    return AInputQueue_fromJava(env, queueObj);
+    ANativeActivity* activity = geode::android::getActivity();
+    if (!activity) return nullptr;
+    return activity->inputQueue;
 }
 
-// ===== Input Thread =====
+// ===== Input Thread (fixed deprecated calls) =====
 void inputThreadFunc() {
     g_threadRunning = true;
     g_startTime = std::chrono::steady_clock::now();
+
     g_inputQueue = getInputQueueFromActivity();
     if (!g_inputQueue) {
         log::error("Click Beyond Frames: Failed to get Android input queue!");
         g_threadRunning = false;
         return;
     }
+
     while (g_threadRunning) {
         if (g_cbfEnabled.load() && !g_cbfOverride.load()) {
             int sleepMs = 1000 / g_pollingRate.load();
             if (sleepMs < 1) sleepMs = 1;
-            ALooper_pollAll(sleepMs, nullptr, nullptr, nullptr);
+
+            // Use ALooper_pollOnce instead of deprecated ALooper_pollAll
+            ALooper_pollOnce(sleepMs, nullptr, nullptr, nullptr);
+
             AInputEvent* event = nullptr;
             while (AInputQueue_getEvent(g_inputQueue, &event) >= 0) {
                 if (AInputQueue_preDispatchEvent(g_inputQueue, event)) {
@@ -82,7 +84,9 @@ void inputThreadFunc() {
 // ===== PlayLayer Hooks =====
 class $modify(PlayLayer) {
     bool init(GJGameLevel* level) {
-        if (!PlayLayer::init(level)) return false;
+        // Call the 3‑argument init – the extra args control replay and object creation
+        if (!PlayLayer::init(level, false, false)) return false;
+
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
             FLAlertLayer::create(
                 "Click Beyond Frames",
@@ -93,6 +97,7 @@ class $modify(PlayLayer) {
             )->show();
             Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
         }
+
         if (g_inputThread.joinable()) {
             g_threadRunning = false;
             g_inputThread.join();
@@ -102,6 +107,7 @@ class $modify(PlayLayer) {
         g_inputThread = std::thread(inputThreadFunc);
         return true;
     }
+
     void onExit() {
         g_threadRunning = false;
         if (g_inputThread.joinable()) {
@@ -111,22 +117,24 @@ class $modify(PlayLayer) {
     }
 };
 
-// ===== Block vanilla touch events =====
+// ===== Block vanilla touch events (override correctly) =====
 class $modify(Application, CCApplication) {
     bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
-            return true;
+            return true; // block original handling
         }
+        // Call the base method directly (not via CCApplication::)
         return CCApplication::ccTouchBegan(touch, event);
     }
 };
 
 // ===== Settings listeners =====
 $on_mod(Loaded) {
-    listenForSettingChanges("cbf-enabled", [](bool value) {
+    // Specify the template argument explicitly
+    listenForSettingChanges<bool>("cbf-enabled", [](bool value) {
         g_cbfEnabled = value;
     });
-    listenForSettingChanges("polling-rate", [](int value) {
+    listenForSettingChanges<int>("polling-rate", [](int value) {
         g_pollingRate = value;
     });
 }
