@@ -60,17 +60,15 @@ class $modify(PlayLayer) {
         if (!PlayLayer::init(level, useReplay, isPractice)) return false;
 
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
-            // Fixed multiline string – all on one line with 
-
             FLAlertLayer::create(
-                "Click Beyond Frames",
-                "This mod exceeds RobTop's 480 TPS cap.
-"
-                "Records above 480 Hz may be rejected on some lists.
-"
-                "Use at your own discretion.",
-                "OK"
-            )->show();
+                 "Click Beyond Frames",
+                 "This mod exceeds RobTop's 480 TPS cap.
+            "
+                 "Records above 480 Hz may be rejected on some lists.
+            "
+                 "Use at your own discretion.",
+                 "OK"
+             )->show();
             Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
         }
 
