@@ -81,7 +81,7 @@ jobs:
 
       - name: Build mod
         run: |
-          geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- -DCMAKE_CXX_STANDARD=20 -DGEODE_UNITY_BUILD=OFF
+          geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- -DCMAKE_CXX_STANDARD=23 -DGEODE_UNITY_BUILD=OFF
         env:
           GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
 
