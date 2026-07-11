@@ -83,15 +83,13 @@ class $modify(CCScheduler) {
             g_lastUpdate = now;
             
             if (g_showCounter.load() && g_counterLabel) {
-                char buffer[64];
+                char buffer[64] = "";
                 if (g_showFps.load() && g_showTps.load()) {
                     sprintf(buffer, "FPS: %.0f | TPS: %d", g_currentFps.load(), g_currentTps.load());
                 } else if (g_showFps.load()) {
                     sprintf(buffer, "FPS: %.0f", g_currentFps.load());
                 } else if (g_showTps.load()) {
                     sprintf(buffer, "TPS: %d", g_currentTps.load());
-                } else {
-                    buffer[0] = '';
                 }
                 g_counterLabel->setString(buffer);
                 g_counterLabel->setColor(getColor(g_counterColor.load()));
@@ -129,15 +127,13 @@ class $modify(PlayLayer) {
             g_counterLabel->removeFromParentAndCleanup(true);
         }
         
-        char buffer[64];
+        char buffer[64] = "";
         if (g_showFps.load() && g_showTps.load()) {
             sprintf(buffer, "FPS: 0 | TPS: 0");
         } else if (g_showFps.load()) {
             sprintf(buffer, "FPS: 0");
         } else if (g_showTps.load()) {
             sprintf(buffer, "TPS: 0");
-        } else {
-            buffer[0] = '';
         }
         
         g_counterLabel = CCLabelBMFont::create(buffer, "goldFont.fnt");
