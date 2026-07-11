@@ -1,91 +1,38 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
-#include <Geode/platform/android.hpp>   // geode::android::getEnv, getActivity
+#include <Geode/binding/GJBaseGameLayer.hpp>
 
 #include <thread>
 #include <atomic>
 #include <chrono>
-#include <android/input.h>
-#include <android/looper.h>
-#include <jni.h>
 
 using namespace geode::prelude;
 
 // ===== Global State =====
 std::atomic<bool> g_cbfEnabled = true;
 std::atomic<int> g_pollingRate = 1000;
-std::atomic<bool> g_cbfOverride = false;
 std::atomic<bool> g_threadRunning = false;
-std::atomic<bool> g_holding = false;
+std::atomic<bool> g_touchHeld = false;        // set by ccTouchBegan/Ended
+std::atomic<bool> g_holding = false;          // prevents repeated push/release
 std::thread g_inputThread;
-std::chrono::steady_clock::time_point g_startTime;
-static AInputQueue* g_inputQueue = nullptr;
-
-// ===== Get the input queue via JNI =====
-AInputQueue* getInputQueueFromActivity() {
-    JNIEnv* env = geode::android::getEnv();
-    if (!env) return nullptr;
-
-    jobject activityObj = geode::android::getActivity();
-    if (!activityObj) return nullptr;
-
-    jclass activityClass = env->GetObjectClass(activityObj);
-    jmethodID getQueue = env->GetMethodID(activityClass, "getInputQueue", "()Landroid/view/InputQueue;");
-    jobject queueObj = env->CallObjectMethod(activityObj, getQueue);
-    if (!queueObj) return nullptr;
-
-    // AInputQueue_fromJava requires API level 33, but we can use it safely
-    // if we set android:minSdkVersion to 33 in the manifest (or we can
-    // fallback to using activity->inputQueue, but that's not exposed in JNI)
-    return AInputQueue_fromJava(env, queueObj);
-}
 
 // ===== Input Thread =====
 void inputThreadFunc() {
     g_threadRunning = true;
-    g_startTime = std::chrono::steady_clock::now();
-
-    g_inputQueue = getInputQueueFromActivity();
-    if (!g_inputQueue) {
-        log::error("Click Beyond Frames: Failed to get Android input queue!");
-        g_threadRunning = false;
-        return;
-    }
-
     while (g_threadRunning) {
-        if (g_cbfEnabled.load() && !g_cbfOverride.load()) {
+        if (g_cbfEnabled.load()) {
             int sleepMs = 1000 / g_pollingRate.load();
             if (sleepMs < 1) sleepMs = 1;
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
 
-            // Use non-deprecated ALooper_pollOnce
-            ALooper_pollOnce(sleepMs, nullptr, nullptr, nullptr);
+            auto pl = PlayLayer::get();
+            if (!pl || pl->m_isPaused) continue;
 
-            AInputEvent* event = nullptr;
-            while (AInputQueue_getEvent(g_inputQueue, &event) >= 0) {
-                if (AInputQueue_preDispatchEvent(g_inputQueue, event)) {
-                    continue;
-                }
-                int32_t type = AInputEvent_getType(event);
-                if (type == AINPUT_EVENT_TYPE_MOTION) {
-                    int32_t action = AMotionEvent_getAction(event);
-                    int32_t actionMasked = action & AMOTION_EVENT_ACTION_MASK;
-                    if (actionMasked == AMOTION_EVENT_ACTION_DOWN || actionMasked == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-                        if (!g_holding.exchange(true)) {
-                            auto pl = PlayLayer::get();
-                            if (pl && !pl->m_isPaused) {
-                                pl->pushButton(0);
-                            }
-                        }
-                    } else if (actionMasked == AMOTION_EVENT_ACTION_UP || actionMasked == AMOTION_EVENT_ACTION_POINTER_UP) {
-                        if (g_holding.exchange(false)) {
-                            auto pl = PlayLayer::get();
-                            if (pl) {
-                                pl->releaseButton(0);
-                            }
-                        }
-                    }
-                }
-                AInputQueue_finishEvent(g_inputQueue, event, 0);
+            bool held = g_touchHeld.load();
+            if (held && !g_holding.exchange(true)) {
+                pl->pushButton(0);
+            } else if (!held && g_holding.exchange(false)) {
+                pl->releaseButton(0);
             }
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -128,13 +75,30 @@ class $modify(PlayLayer) {
     }
 };
 
-// ===== Block vanilla touch events =====
+// ===== Touch overrides =====
 class $modify(Application, CCApplication) {
     bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
-            return true; // block original handling
+            g_touchHeld = true;
+            return true; // block the original event
         }
         return CCApplication::ccTouchBegan(touch, event);
+    }
+
+    void ccTouchEnded(CCTouch* touch, CCEvent* event) {
+        if (g_cbfEnabled.load() && PlayLayer::get()) {
+            g_touchHeld = false;
+            return; // block the original event
+        }
+        CCApplication::ccTouchEnded(touch, event);
+    }
+
+    void ccTouchCancelled(CCTouch* touch, CCEvent* event) {
+        if (g_cbfEnabled.load() && PlayLayer::get()) {
+            g_touchHeld = false;
+            return;
+        }
+        CCApplication::ccTouchCancelled(touch, event);
     }
 };
 
