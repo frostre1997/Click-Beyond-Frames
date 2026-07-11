@@ -19,7 +19,6 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Disable Unity builds (optional)
 set(GEODE_UNITY_BUILD OFF CACHE BOOL "Disable Unity builds" FORCE)
 
 if (NOT DEFINED ENV{GEODE_SDK})
@@ -32,5 +31,5 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 setup_geode_mod(${PROJECT_NAME})
 
-# IMPORTANT: Add this AFTER setup_geode_mod so it isn't overwritten
-target_include_directories(${PROJECT_NAME} PRIVATE api/include)
+# Include the headers (now directly in 'include' folder)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
