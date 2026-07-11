@@ -79,7 +79,7 @@ jobs:
         with:
           name: ClickBeyondFrames-${{ matrix.platform }}
           path: build/**/*.geode
-        if-no-files-found: error
+          if-no-files-found: error
 
   combine:
     name: Package Builds
