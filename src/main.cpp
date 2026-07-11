@@ -12,6 +12,7 @@ using namespace geode::prelude;
 std::atomic<bool> g_cbfEnabled = true;
 std::atomic<int> g_pollingRate = 1000;
 std::atomic<bool> g_threadRunning = false;
+std::thread g_inputThread;
 
 // Counter
 std::atomic<bool> g_showCounter = false;
@@ -43,8 +44,8 @@ void inputThreadFunc() {
 
 // CCDirector Hook
 class $modify(CCDirector) {
-    void visit(float dt) {
-        CCDirector::visit(dt);
+    void update(float dt) {
+        CCDirector::update(dt);
         g_frameCount++;
         
         auto now = std::chrono::steady_clock::now();
