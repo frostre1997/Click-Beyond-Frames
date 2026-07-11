@@ -21,6 +21,7 @@ jobs:
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
       GEODE_VERSION: "5.8.0"
+      CXXFLAGS: "-std=c++17 -D_LIBCPP_STD_VER=17"   # Force C++17 globally
 
     steps:
       - name: Checkout repository
@@ -44,6 +45,10 @@ jobs:
           geode sdk update ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
+
+      - name: Clean potential cached nontype_functional
+        run: |
+          rm -rf $CPM_SOURCE_CACHE/nontype_functional 2>/dev/null || true
 
       - name: Locate loader binary
         id: locate
@@ -85,11 +90,12 @@ jobs:
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- \
             -DCMAKE_CXX_STANDARD=17 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-            -DCMAKE_CXX_EXTENSIONS=OFF \
-            -DCMAKE_CXX_FLAGS="-std=c++17" \
+            -DCMAKE_CXX_EXTENSIONS=ON \
+            -DCMAKE_CXX_FLAGS="-std=gnu++17 -D_LIBCPP_STD_VER=17" \
             -DGEODE_UNITY_BUILD=OFF
         env:
           GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
+          CXXFLAGS: ${{ env.CXXFLAGS }}  # Also pass via environment
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
