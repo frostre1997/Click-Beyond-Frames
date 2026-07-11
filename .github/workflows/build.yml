@@ -25,7 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debug - check mod.json
+      - name: Debug - verify mod.json exists
         run: cat mod.json
 
       - name: Install system dependencies
