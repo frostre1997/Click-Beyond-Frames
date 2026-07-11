@@ -1,6 +1,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
-#include <Geode/platform/android.hpp>   // getActivity()
+#include <Geode/platform/android.hpp>   // geode::android::getActivity()
+#include <Geode/binding/GJBaseGameLayer.hpp>  // for pushButton/releaseButton
 
 #include <thread>
 #include <atomic>
@@ -45,7 +46,7 @@ void inputThreadFunc() {
             int sleepMs = 1000 / g_pollingRate.load();
             if (sleepMs < 1) sleepMs = 1;
 
-            // Use ALooper_pollOnce (non-deprecated)
+            // Use non-deprecated ALooper_pollOnce
             ALooper_pollOnce(sleepMs, nullptr, nullptr, nullptr);
 
             AInputEvent* event = nullptr;
@@ -61,14 +62,15 @@ void inputThreadFunc() {
                         if (!g_holding.exchange(true)) {
                             auto pl = PlayLayer::get();
                             if (pl && !pl->m_isPaused) {
-                                pl->pushButton(0);
+                                // Cast to GJBaseGameLayer for pushButton
+                                static_cast<GJBaseGameLayer*>(pl)->pushButton(0);
                             }
                         }
                     } else if (actionMasked == AMOTION_EVENT_ACTION_UP || actionMasked == AMOTION_EVENT_ACTION_POINTER_UP) {
                         if (g_holding.exchange(false)) {
                             auto pl = PlayLayer::get();
                             if (pl) {
-                                pl->releaseButton(0);
+                                static_cast<GJBaseGameLayer*>(pl)->releaseButton(0);
                             }
                         }
                     }
@@ -123,7 +125,7 @@ class $modify(Application, CCApplication) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
             return true; // block original handling
         }
-        return CCApplication::ccTouchBegan(touch, event);
+        return false; // let the game handle it normally
     }
 };
 
