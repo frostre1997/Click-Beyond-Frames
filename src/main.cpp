@@ -1,6 +1,6 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
-#include <Geode/binding/GJBaseGameLayer.hpp>
+#include <Geode/loader/Mod.hpp>
 
 #include <thread>
 #include <atomic>
@@ -12,14 +12,14 @@ using namespace geode::prelude;
 std::atomic<bool> g_cbfEnabled = true;
 std::atomic<int> g_pollingRate = 1000;
 std::atomic<bool> g_threadRunning = false;
-std::atomic<bool> g_touchHeld = false;        // set by ccTouchBegan/Ended
-std::atomic<bool> g_holding = false;          // prevents repeated push/release
+std::atomic<bool> g_touchHeld = false;
+std::atomic<bool> g_holding = false;
 std::thread g_inputThread;
 
 // ===== Input Thread =====
 void inputThreadFunc() {
     g_threadRunning = true;
-    while (g_threadRunning) {
+    while (g_threadRunning.load()) {
         if (g_cbfEnabled.load()) {
             int sleepMs = 1000 / g_pollingRate.load();
             if (sleepMs < 1) sleepMs = 1;
@@ -29,10 +29,16 @@ void inputThreadFunc() {
             if (!pl || pl->m_isPaused) continue;
 
             bool held = g_touchHeld.load();
-            if (held && !g_holding.exchange(true)) {
-                pl->pushButton(0);
-            } else if (!held && g_holding.exchange(false)) {
-                pl->releaseButton(0);
+            bool wasHolding = g_holding.load();
+            
+            if (held && !wasHolding) {
+                if (g_holding.compare_exchange_strong(wasHolding, true)) {
+                    pl->pushButton(0);
+                }
+            } else if (!held && wasHolding) {
+                if (g_holding.compare_exchange_strong(wasHolding, false)) {
+                    pl->releaseButton(0);
+                }
             }
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -42,14 +48,16 @@ void inputThreadFunc() {
 
 // ===== PlayLayer Hooks =====
 class $modify(PlayLayer) {
-    bool init(GJGameLevel* level) {
-        if (!PlayLayer::init(level, false, false)) return false;
+    bool init(GJGameLevel* level, bool useReplay, bool isPractice) {
+        if (!PlayLayer::init(level, useReplay, isPractice)) return false;
 
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
             FLAlertLayer::create(
                 "Click Beyond Frames",
-                "This mod exceeds RobTop's 480 TPS cap.\n"
-                "Records above 480 Hz may be rejected on some lists.\n"
+                "This mod exceeds RobTop's 480 TPS cap.
+"
+                "Records above 480 Hz may be rejected on some lists.
+"
                 "Use at your own discretion.",
                 "OK"
             )->show();
@@ -76,7 +84,7 @@ class $modify(PlayLayer) {
 };
 
 // ===== Touch overrides =====
-class $modify(Application, CCApplication) {
+class $modify(CCApplication) {
     bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
             g_touchHeld = true;
