@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Force C++17 for all targets
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-# Also set as a compiler flag to be safe
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+# Force C++20 for all targets and dependencies
+set(CMAKE_CXX_STANDARD 20 CACHE STRING "" FORCE)
+set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE)
+set(CMAKE_CXX_EXTENSIONS ON CACHE BOOL "" FORCE)   # Use GNU extensions
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++20" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=gnu++20" CACHE STRING "" FORCE)
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
     set(CMAKE_OSX_ARCHITECTURES "arm64")
@@ -22,7 +22,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE api/include)
 
-# Disable Unity builds for Geode dependencies
+# Disable Unity builds for Geode dependencies (optional)
 set(GEODE_UNITY_BUILD OFF CACHE BOOL "Disable Unity builds" FORCE)
 
 if (NOT DEFINED ENV{GEODE_SDK})
