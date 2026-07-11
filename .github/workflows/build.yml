@@ -78,7 +78,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-${{ matrix.platform }}
-          path: build/${{ matrix.platform }}/*.geode
+          path: build/**/*.geode
+        if-no-files-found: error
 
   combine:
     name: Package Builds
