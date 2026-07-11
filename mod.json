@@ -1,32 +1,72 @@
 {
-    "id": "frostre1997.click-beyond-frames",
-    "name": "Click Beyond Frames",
-    "version": "v1.0.0",
-    "developer": "frostre1997",
-    "description": "Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android.",
-    "geode": "5.8.1",
+    "geode": "5.0.0",
+    "version": "1.0.0",
     "gd": {
         "win": "2.2081",
         "android": "2.2081",
         "mac": "2.2081",
         "ios": "2.2081"
     },
-    "tags": ["gameplay", "performance", "utility", "android"],
-    "platforms": ["android"],
+    "id": "clickbeyondframes",
+    "name": "ClickBeyondFrames",
+    "developer": "frostre1997",
+    "description": "Click Beyond Frames with customizable FPS/TPS counter",
     "settings": {
         "cbf-enabled": {
-            "name": "Enable Click Beyond Frames",
-            "description": "Toggle the mod on/off",
+            "name": "Enable CBF",
             "type": "bool",
             "default": true
         },
         "polling-rate": {
             "name": "Polling Rate (Hz)",
-            "description": "Higher = more precise. Vanilla cap is 480.",
             "type": "int",
             "default": 1000,
             "min": 60,
             "max": 2000
+        },
+        "show-counter": {
+            "name": "Show Counter",
+            "type": "bool",
+            "default": true
+        },
+        "counter-scale": {
+            "name": "Counter Scale",
+            "type": "float",
+            "default": 0.5,
+            "min": 0.3,
+            "max": 2.0
+        },
+        "counter-pos-x": {
+            "name": "Position X Offset",
+            "type": "float",
+            "default": 0.0,
+            "min": -500.0,
+            "max": 500.0
+        },
+        "counter-pos-y": {
+            "name": "Position Y Offset",
+            "type": "float",
+            "default": 0.0,
+            "min": -500.0,
+            "max": 500.0
+        },
+        "show-fps": {
+            "name": "Show FPS",
+            "type": "bool",
+            "default": true
+        },
+        "show-tps": {
+            "name": "Show TPS",
+            "type": "bool",
+            "default": true
+        },
+        "counter-color": {
+            "name": "Counter Color",
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "max": 3,
+            "description": "0=White, 1=Green, 2=Yellow, 3=Red"
         }
     }
 }
