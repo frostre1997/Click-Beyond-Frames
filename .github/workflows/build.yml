@@ -91,15 +91,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
-      - name: Show downloaded files
-        run: ls -R artifacts
+      - name: Inspect downloaded layout
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type f | sort
 
       - name: Pack release zip
         run: |
           mkdir -p combined
-          files=$(find artifacts -name '*.geode' -print)
+          files=$(find . -name '*.geode' -print)
           if [ -z "$files" ]; then
             echo "No .geode files found"
             exit 1
