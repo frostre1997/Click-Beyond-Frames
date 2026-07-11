@@ -18,19 +18,13 @@ jobs:
     env:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
-      GEODE_VERSION: "5.8.1"
-      NDK_HOME: ${{ github.workspace }}/android-ndk-r28
+      GEODE_VERSION: "5.7.1"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
 
       - name: Install Geode CLI
         uses: geode-sdk/cli/.github/actions/setup@main
@@ -48,12 +42,6 @@ jobs:
           geode sdk update ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
           geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
-
-      - name: Download Android NDK r28 (Clang 19+)
-        run: |
-          wget -q https://dl.google.com/android/repository/android-ndk-r28-linux.zip
-          unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
-          echo "NDK_HOME=${{ github.workspace }}/android-ndk-r28" >> $GITHUB_ENV
 
       - name: Generate mod.json from template
         run: |
@@ -69,16 +57,12 @@ jobs:
         run: |
           geode build -p ${{ matrix.platform }} \
             --config Release \
-            --ndk "$NDK_HOME" \
             -- \
-            -G Ninja \
-            -DCMAKE_CXX_STANDARD=20 \
+            -DCMAKE_CXX_STANDARD=17 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_EXTENSIONS=ON \
-            -DCMAKE_CXX_FLAGS="-std=gnu++20 -D_LIBCPP_STD_VER=20" \
+            -DCMAKE_CXX_FLAGS="-std=gnu++17" \
             -DGEODE_UNITY_BUILD=OFF
-        env:
-          GEODE_BINARY_DIR: ${{ env.GEODE_SDK }}/bin/${{ env.GEODE_VERSION }}
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
@@ -92,39 +76,18 @@ jobs:
     needs: build-android
     if: always()
 
-    env:
-      GEODE_SDK: ${{ github.workspace }}/geode-sdk
-      GEODE_VERSION: "5.8.1"
-
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Install Geode CLI
-        uses: geode-sdk/cli/.github/actions/setup@main
-        with:
-          version: latest
-
-      - name: Setup dummy Geode profile
-        run: |
-          mkdir -p dummy_profile
-          geode profile add --name dummy dummy_profile/GeometryDash.exe win
-
-      - name: Install Geode SDK (${{ env.GEODE_VERSION }})
-        run: |
-          geode sdk install "$GEODE_SDK"
-          geode sdk update ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android64 --version ${{ env.GEODE_VERSION }}
-          geode sdk install-binaries --platform android32 --version ${{ env.GEODE_VERSION }}
-
       - name: Combine .geode files
         run: |
           mkdir combined
           geode combine artifacts/ClickBeyondFrames-Android64/*.geode artifacts/ClickBeyondFrames-Android32/*.geode -o combined/frostre1997.ClickBeyondFrames.geode
         env:
-          GEODE_BINARY_DIR: ${{ env.GEODE_SDK }}/bin/${{ env.GEODE_VERSION }}
+          GEODE_SDK: ${{ github.workspace }}/geode-sdk
 
       - name: Upload Combined Artifact
         uses: actions/upload-artifact@v4
