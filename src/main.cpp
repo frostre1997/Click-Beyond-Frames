@@ -64,11 +64,9 @@ class $modify(PlayLayer) {
 
             FLAlertLayer::create(
                 "Click Beyond Frames",
-                "This mod exceeds RobTop's 480 TPS cap.
-"
-                "Records above 480 Hz may be rejected on some lists.
-"
-                "Use at your own discretion.",
+                R"(This mod exceeds RobTop's 480 TPS cap.
+                        Records above 480 Hz may be rejected on some lists.
+                        Use at your own discretion.)",
                 "OK"
             )->show();
             Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
