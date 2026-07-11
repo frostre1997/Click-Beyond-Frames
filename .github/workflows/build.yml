@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-android:
-    name: Build ${{ matrix.platform }}
+    name: ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -24,8 +24,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         run: |
@@ -70,19 +68,20 @@ jobs:
           # Also patch any other occurrences (just in case)
           sed -i 's/std::is_trivially_default_constructible_v<[^>]*>/std::is_trivially_default_constructible<\1>::value/g' include/std23/move_only_function.h || true
 
-      - name: Generate mod.json from template
+      - name: Generate mod.json
         run: |
-          export GEODE_VERSION="${{ env.GEODE_VERSION }}"
-          export MOD_ID="frostre1997.click-beyond-frames"
-          export MOD_NAME="Click Beyond Frames"
-          export MOD_VERSION="v1.0.0"
-          export MOD_DEVELOPER="frostre1997"
-          export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
-          envsubst < mod.json.template > mod.json
+          # Since we now have a static mod.json, we can skip envsubst.
+          # But if you still want to use a template, uncomment the lines below.
+          # export GEODE_VERSION="${{ env.GEODE_VERSION }}"
+          # export MOD_ID="frostre1997.click-beyond-frames"
+          # export MOD_NAME="Click Beyond Frames"
+          # export MOD_VERSION="v1.0.0"
+          # export MOD_DEVELOPER="frostre1997"
+          # export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
+          # envsubst < mod.json.template > mod.json
+          # For now, we just ensure a mod.json exists
+          cat mod.json
 
-      - name: Check API submodule
-        run: ls -la api/include/ClickBeyondFrames/
-      
       - name: Build mod
         run: |
           geode build -p ${{ matrix.platform }} \
@@ -97,7 +96,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-${{ matrix.platform }}
-          path: build/${{ matrix.platform }}/*.geode
+          path: /${{ matrix.platform }}/*.geode
 
   combine:
     name: Combine Builds
