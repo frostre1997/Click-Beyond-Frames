@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-android:
-    name: ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -24,6 +24,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Debug - check mod.json
+        run: cat mod.json
 
       - name: Install system dependencies
         run: |
@@ -55,32 +58,12 @@ jobs:
 
       - name: Patch nontype_functional in CPM cache
         run: |
-          # Remove any previously cached version to force fresh clone
           rm -rf $CPM_SOURCE_CACHE/nontype_functional
-
-          # Clone the specific commit used by the build (aaa0)
           mkdir -p $CPM_SOURCE_CACHE/nontype_functional
           git clone https://github.com/zhihaoy/nontype_functional $CPM_SOURCE_CACHE/nontype_functional/aaa0
-
-          # Apply the patch: replace variable template with class trait
           cd $CPM_SOURCE_CACHE/nontype_functional/aaa0
           sed -i 's/std::is_trivially_default_constructible_v<D>/std::is_trivially_default_constructible<D>::value/g' include/std23/move_only_function.h
-          # Also patch any other occurrences (just in case)
           sed -i 's/std::is_trivially_default_constructible_v<[^>]*>/std::is_trivially_default_constructible<\1>::value/g' include/std23/move_only_function.h || true
-
-      - name: Generate mod.json
-        run: |
-          # Since we now have a static mod.json, we can skip envsubst.
-          # But if you still want to use a template, uncomment the lines below.
-          # export GEODE_VERSION="${{ env.GEODE_VERSION }}"
-          # export MOD_ID="frostre1997.click-beyond-frames"
-          # export MOD_NAME="Click Beyond Frames"
-          # export MOD_VERSION="v1.0.0"
-          # export MOD_DEVELOPER="frostre1997"
-          # export MOD_DESCRIPTION="Removes the 480 TPS cap from RobTop's official CBF for unlimited input precision on Android."
-          # envsubst < mod.json.template > mod.json
-          # For now, we just ensure a mod.json exists
-          cat mod.json
 
       - name: Build mod
         run: |
@@ -96,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClickBeyondFrames-${{ matrix.platform }}
-          path: /${{ matrix.platform }}/*.geode
+          path: build/${{ matrix.platform }}/*.geode
 
   combine:
     name: Combine Builds
