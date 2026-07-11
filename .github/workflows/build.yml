@@ -20,7 +20,7 @@ jobs:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
-      GEODE_VERSION: "5.8.0"  # Use 5.8.0
+      GEODE_VERSION: "5.8.0"
 
     steps:
       - name: Checkout repository
@@ -83,13 +83,13 @@ jobs:
       - name: Build mod
         run: |
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- \
-          -DCMAKE_CXX_STANDARD=17 \
-          -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-          -DCMAKE_CXX_EXTENSIONS=OFF \
-          -DCMAKE_CXX_FLAGS="-std=c++17" \
-          -DGEODE_UNITY_BUILD=OFF
-       env:
-         GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
+            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_CXX_EXTENSIONS=OFF \
+            -DCMAKE_CXX_FLAGS="-std=c++17" \
+            -DGEODE_UNITY_BUILD=OFF
+        env:
+          GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
