@@ -1,6 +1,6 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
-#include <Geode/utils/android.hpp>   // for getEnv(), getActivity()
+#include <Geode/platform/android.hpp>   // getActivity()
 
 #include <thread>
 #include <atomic>
@@ -28,7 +28,7 @@ AInputQueue* getInputQueueFromActivity() {
     return activity->inputQueue;
 }
 
-// ===== Input Thread (fixed deprecated calls) =====
+// ===== Input Thread =====
 void inputThreadFunc() {
     g_threadRunning = true;
     g_startTime = std::chrono::steady_clock::now();
@@ -45,7 +45,7 @@ void inputThreadFunc() {
             int sleepMs = 1000 / g_pollingRate.load();
             if (sleepMs < 1) sleepMs = 1;
 
-            // Use ALooper_pollOnce instead of deprecated ALooper_pollAll
+            // Use ALooper_pollOnce (non-deprecated)
             ALooper_pollOnce(sleepMs, nullptr, nullptr, nullptr);
 
             AInputEvent* event = nullptr;
@@ -84,7 +84,7 @@ void inputThreadFunc() {
 // ===== PlayLayer Hooks =====
 class $modify(PlayLayer) {
     bool init(GJGameLevel* level) {
-        // Call the 3‑argument init – the extra args control replay and object creation
+        // PlayLayer::init takes 3 arguments
         if (!PlayLayer::init(level, false, false)) return false;
 
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
@@ -117,20 +117,18 @@ class $modify(PlayLayer) {
     }
 };
 
-// ===== Block vanilla touch events (override correctly) =====
+// ===== Block vanilla touch events =====
 class $modify(Application, CCApplication) {
     bool ccTouchBegan(CCTouch* touch, CCEvent* event) {
         if (g_cbfEnabled.load() && PlayLayer::get()) {
             return true; // block original handling
         }
-        // Call the base method directly (not via CCApplication::)
         return CCApplication::ccTouchBegan(touch, event);
     }
 };
 
 // ===== Settings listeners =====
 $on_mod(Loaded) {
-    // Specify the template argument explicitly
     listenForSettingChanges<bool>("cbf-enabled", [](bool value) {
         g_cbfEnabled = value;
     });
