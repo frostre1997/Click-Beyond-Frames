@@ -21,7 +21,7 @@ std::atomic<float> g_counterPosX = 0.0f;
 std::atomic<float> g_counterPosY = 0.0f;
 std::atomic<bool> g_showFps = true;
 std::atomic<bool> g_showTps = true;
-std::atomic<int> g_counterColor = 0; // 0=white, 1=green, 2=yellow, 3=red
+std::atomic<int> g_counterColor = 0;
 
 // FPS/TPS data
 std::atomic<float> g_currentFps = 0.0f;
@@ -108,11 +108,9 @@ class $modify(PlayLayer) {
         if (!Mod::get()->getSavedValue<bool>("cbf-warning-shown")) {
             FLAlertLayer::create(
                 "Click Beyond Frames",
-                "This mod exceeds RobTop's 480 TPS cap.
-        "
-                "Records above 480 Hz may be rejected on some lists.
-        "
-                "Use at your own discretion.",
+                R"(This mod exceeds RobTop's 480 TPS cap.
+        Records above 480 Hz may be rejected on some lists.
+        Use at your own discretion.)",
                 "OK"
             )->show();
             Mod::get()->setSavedValue<bool>("cbf-warning-shown", true);
@@ -151,9 +149,6 @@ class $modify(PlayLayer) {
         g_counterLabel->setOpacity(200);
         g_counterLabel->setColor(getColor(g_counterColor.load()));
         this->addChild(g_counterLabel, 10000);
-
-        log::info("CBF: Counter created at ({}, {}), scale: {}, visible: {}", 
-            g_counterPosX.load(), g_counterPosY.load(), g_counterScale.load(), g_showCounter.load());
 
         return true;
     }
