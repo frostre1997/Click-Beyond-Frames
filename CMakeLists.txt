@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 cmake_policy(SET CMP0175 NEW)
 
-set(ANDROID_PLATFORM "Android-33" CACHE STRING "")
-
 project(Template VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
