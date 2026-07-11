@@ -55,6 +55,21 @@ jobs:
           unzip -q android-ndk-r28-linux.zip -d ${{ github.workspace }}
           echo "ANDROID_NDK=${{ github.workspace }}/android-ndk-r28" >> $GITHUB_ENV
 
+      - name: Patch nontype_functional in CPM cache
+        run: |
+          # Remove any previously cached version to force fresh clone
+          rm -rf $CPM_SOURCE_CACHE/nontype_functional
+
+          # Clone the specific commit used by the build (aaa0)
+          mkdir -p $CPM_SOURCE_CACHE/nontype_functional
+          git clone https://github.com/zhihaoy/nontype_functional $CPM_SOURCE_CACHE/nontype_functional/aaa0
+
+          # Apply the patch: replace variable template with class trait
+          cd $CPM_SOURCE_CACHE/nontype_functional/aaa0
+          sed -i 's/std::is_trivially_default_constructible_v<D>/std::is_trivially_default_constructible<D>::value/g' include/std23/move_only_function.h
+          # Also patch any other occurrences (just in case)
+          sed -i 's/std::is_trivially_default_constructible_v<[^>]*>/std::is_trivially_default_constructible<\1>::value/g' include/std23/move_only_function.h || true
+
       - name: Generate mod.json from template
         run: |
           export GEODE_VERSION="${{ env.GEODE_VERSION }}"
