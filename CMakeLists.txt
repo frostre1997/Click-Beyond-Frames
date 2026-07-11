@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
-set(CMAKE_CXX_STANDARD 20)
+
+# Force C++17 for all targets
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+# Also set as a compiler flag to be safe
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
     set(CMAKE_OSX_ARCHITECTURES "arm64")
 else()
@@ -17,7 +22,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE api/include)
 
-# Disable Unity builds to avoid header ordering issues
+# Disable Unity builds for Geode dependencies
 set(GEODE_UNITY_BUILD OFF CACHE BOOL "Disable Unity builds" FORCE)
 
 if (NOT DEFINED ENV{GEODE_SDK})
