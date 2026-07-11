@@ -13,12 +13,6 @@
     },
     "tags": ["gameplay", "performance", "utility", "android"],
     "platforms": ["android"],
-    "dependencies": {
-        "frostre1997.click-beyond-frames-api": {
-            "version": ">=v1.0.0",
-            "required": true
-        }
-    },
     "settings": {
         "cbf-enabled": {
             "name": "Enable Click Beyond Frames",
