@@ -20,8 +20,8 @@ jobs:
       GEODE_SDK: ${{ github.workspace }}/geode-sdk
       CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
       ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r28
-      GEODE_VERSION: "5.8.0"
-      CXXFLAGS: "-std=c++17 -D_LIBCPP_STD_VER=17"   # Force C++17 globally
+      GEODE_VERSION: "5.8.1"   # Updated to latest patch
+      CXXFLAGS: "-std=c++20 -D_LIBCPP_STD_VER=20"
 
     steps:
       - name: Checkout repository
@@ -88,14 +88,13 @@ jobs:
       - name: Build mod
         run: |
           geode build -p ${{ matrix.platform }} --config Release --ndk "$ANDROID_NDK_HOME" -- \
-            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_STANDARD=20 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-            -DCMAKE_CXX_EXTENSIONS=ON \
-            -DCMAKE_CXX_FLAGS="-std=gnu++17 -D_LIBCPP_STD_VER=17" \
+            -DCMAKE_CXX_EXTENSIONS=OFF \
+            -DCMAKE_CXX_FLAGS="-std=c++20 -D_LIBCPP_STD_VER=20" \
             -DGEODE_UNITY_BUILD=OFF
         env:
           GEODE_BINARY_DIR: ${{ env.GEODE_BINARY_DIR }}
-          CXXFLAGS: ${{ env.CXXFLAGS }}  # Also pass via environment
 
       - name: Upload artifact (${{ matrix.platform }})
         uses: actions/upload-artifact@v4
